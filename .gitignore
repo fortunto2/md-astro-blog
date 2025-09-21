@@ -23,6 +23,7 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 .wrangler/
-# husky - ignore internal files but keep hooks
-.husky/_
-.husky/_/
+# husky - keep essential files only
+.husky/*
+!.husky/pre-commit
+!.husky/_/husky.sh
