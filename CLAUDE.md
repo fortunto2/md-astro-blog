@@ -27,7 +27,7 @@ blog2/
 │   ├── lib/
 │   │   └── md.ts                    # Основная логика markdown обработки
 │   ├── pages/
-│   │   ├── index.astro              # Главная страница (MOC + header/footer)
+│   │   ├── index.astro              # Главная страница (domain index + header/footer)
 │   │   ├── n/
 │   │   │   ├── [...slug].astro      # HTML рендеринг заметок
 │   │   │   └── [...slug].md.ts      # API для raw markdown
@@ -48,7 +48,7 @@ blog2/
 export async function fetchNote(slug: string): Promise<Note | null>
 export function parseFrontmatter(markdown: string): { frontmatter: NoteFrontmatter; content: string }
 export function processWikilinks(content: string): string
-export async function fetchMOC(url: string): Promise<string | null>
+export async function fetchPage(slug: string): Promise<string | null>
 export function isPrivate(frontmatter: NoteFrontmatter): boolean
 export function generateMetaTags(frontmatter: NoteFrontmatter, slug: string)
 ```
@@ -74,9 +74,6 @@ pnpm install
 # Запуск dev сервера с R2 эмуляцией (рекомендуется)
 pnpm dev
 
-# Запуск только Astro (без R2, нужен PUBLIC_MD_BASES)
-pnpm dev:astro
-
 # Сборка для продакшена
 pnpm build
 
@@ -86,6 +83,10 @@ pnpm deploy
 # Тесты
 pnpm test
 pnpm test:run
+
+# Линтинг
+pnpm lint
+pnpm lint:fix
 ```
 
 ### Локальная разработка
@@ -195,7 +196,7 @@ aliases: ['алиас1', 'алиас2']  # опционально
 ## Деплой и продакшен
 
 ### Текущие URL
-- **Продакшен**: https://6e85fe13.sgr-blog.pages.dev
+- **Продакшен**: https://2448f163.sgr-blog.pages.dev
 - **Dev сервер**: http://localhost:4322 (если 4321 занят)
 - **R2 CDN (опционально)**: https://content.example.com
 
@@ -320,6 +321,22 @@ headers: {
 
 ---
 
-**Последнее обновление**: 2025-09-21
+## Дополнительные возможности
+
+### Предотвращение дублирования заголовков
+- Система автоматически определяет наличие H1 в начале markdown контента
+- Если контент начинается с `# Заголовок`, то заголовок из frontmatter не рендерится
+- Это предотвращает дублирование заголовков на странице
+- Свойство `hasH1` в интерфейсе `Note` контролирует это поведение
+
+### Тестирование
+- **30 тестов** покрывают все основные функции
+- Тесты для определения H1, обработки wikilinks, domain routing
+- Запуск: `pnpm test` или `pnpm test:run`
+- Линтинг: `pnpm lint` с автофиксом через `pnpm lint:fix`
+
+---
+
+**Последнее обновление**: 2025-09-22
 **Версия Astro**: 5.13.9
 **Статус**: Продакшен готов ✅
