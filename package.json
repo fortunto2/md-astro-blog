@@ -10,8 +10,20 @@
     "deploy": "pnpm build && wrangler pages deploy dist",
     "test": "vitest",
     "test:run": "vitest run",
+    "lint": "eslint . --ext .ts,.astro,.js,.mjs",
+    "lint:fix": "eslint . --ext .ts,.astro,.js,.mjs --fix",
+    "prepare": "husky install",
     "r2:put": "wrangler r2 object put",
     "r2:delete": "wrangler r2 object delete"
+  },
+  "lint-staged": {
+    "*.{ts,astro,js,mjs}": [
+      "eslint --fix",
+      "git add"
+    ],
+    "*.{ts,js}": [
+      "vitest run --reporter=verbose --run"
+    ]
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.8",
@@ -21,6 +33,11 @@
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
+    "eslint": "^9.36.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
     "vitest": "^3.2.4"
   }
 }
