@@ -23,12 +23,6 @@ type RuntimeEnv = {
   };
 } | undefined;
 
-function addEndpoint(endpoints: string[], visited: Set<string>, url: string) {
-  if (!visited.has(url)) {
-    endpoints.push(url);
-    visited.add(url);
-  }
-}
 
 async function loadFromR2(env: RuntimeEnv, key: string): Promise<string | null> {
   if (!env?.BLOG_CONTENT) return null;
@@ -65,6 +59,7 @@ export interface Note {
   content: string;
   html: string;
   slug: string;
+  hasH1: boolean;
 }
 
 export function parseFrontmatter(markdown: string): { frontmatter: NoteFrontmatter; content: string } {
@@ -126,160 +121,70 @@ export function processWikilinks(content: string, addMarkdownLinks = false): str
   return processed;
 }
 
-export async function fetchNote(slug: string, currentDomain?: string, env?: RuntimeEnv): Promise<Note | null> {
-  // Build domain-aware endpoints
-  const endpoints: string[] = [];
-  const visited = new Set<string>();
-  const r2Keys = new Set<string>();
+function createNoteFromMarkdown(markdown: string, slug: string): Note {
+  const { frontmatter, content } = parseFrontmatter(markdown);
+  const processedContent = processWikilinks(content);
+  const html = md.render(processedContent);
 
-  const segments = slug.split('/').filter(Boolean);
-  const firstSegment = segments[0];
-  const rest = segments.slice(1).join('/');
+  // Check if content starts with H1 (# at beginning of line)
+  const hasH1 = /^\s*#\s+/.test(content.trim());
 
-  const addCandidate = (key: string) => {
-    if (!key) return;
-    r2Keys.add(key);
-    addEndpoint(endpoints, visited, `/api/r2/${key}`);
+  return {
+    frontmatter,
+    content: processedContent,
+    html,
+    slug,
+    hasH1
   };
+}
 
+export async function fetchNote(slug: string, currentDomain?: string, env?: RuntimeEnv, request?: Request): Promise<Note | null> {
+  // Simplified domain-aware note fetching
+  const tryKeys: string[] = [];
+
+  // Priority order: domain-specific, shared, legacy
   if (currentDomain) {
-    addCandidate(`${currentDomain}/${slug}.md`);
+    tryKeys.push(`${currentDomain}/${slug}.md`);
   }
+  tryKeys.push(`shared/${slug}.md`);
+  tryKeys.push(`${slug}.md`);
 
-  if (firstSegment === 'shared') {
-    const sharedPath = rest || 'index';
-    addCandidate(`shared/${sharedPath}.md`);
-  }
-
-  if (firstSegment === 'indexes') {
-    const indexPath = rest || 'index';
-    addCandidate(`indexes/${indexPath}.md`);
-  }
-
-  if (firstSegment && firstSegment.includes('.') && rest) {
-    const targetDomain = firstSegment;
-    const domainPath = rest;
-    addCandidate(`${targetDomain}/${domainPath}.md`);
-  }
-
-  // Legacy fallback endpoint
-  addEndpoint(endpoints, visited, `/api/r2/${slug}.md`);
-
-  if (env?.BLOG_CONTENT && r2Keys.size > 0) {
-    for (const key of r2Keys) {
+  // Try R2 first if available (production)
+  if (env?.BLOG_CONTENT) {
+    for (const key of tryKeys) {
       const markdown = await loadFromR2(env, key);
-      if (!markdown) continue;
-      const { frontmatter, content } = parseFrontmatter(markdown);
-      const processedContent = processWikilinks(content);
-      const html = md.render(processedContent);
-
-      return {
-        frontmatter,
-        content: processedContent,
-        html,
-        slug
-      };
+      if (markdown) {
+        return createNoteFromMarkdown(markdown, slug);
+      }
     }
   }
 
-  for (const url of endpoints) {
+  // Fallback to API endpoints (dev + production)
+  for (const key of tryKeys) {
     try {
-      const response = await fetch(url);
-
+      const url = new URL(`/api/r2/${key}`, request?.url || 'http://localhost:4322');
+      const response = await fetch(url.toString());
       if (response.ok) {
         const markdown = await response.text();
-        const { frontmatter, content } = parseFrontmatter(markdown);
-        const processedContent = processWikilinks(content);
-        const html = md.render(processedContent);
-
-        return {
-          frontmatter,
-          content: processedContent,
-          html,
-          slug
-        };
+        return createNoteFromMarkdown(markdown, slug);
       }
     } catch (error) {
-      console.error(`Failed to fetch from ${url}:`, error);
+      console.error(`Failed to fetch ${key}:`, error);
     }
   }
 
   return null;
 }
 
-export async function fetchMOC(url?: string, addMarkdownLinks = false, currentDomain?: string, env?: RuntimeEnv): Promise<string | null> {
-  const keys = new Set<string>();
+export async function fetchPage(slug: string, addMarkdownLinks = false, currentDomain?: string, env?: RuntimeEnv, request?: Request): Promise<string | null> {
+  // Unified page fetching - no distinction between MOC and regular pages
+  const note = await fetchNote(slug, currentDomain, env, request);
+  if (!note) return null;
 
-  if (currentDomain) {
-    keys.add(`${currentDomain}/index.md`);
-  }
-
-  if (url && !url.startsWith('http')) {
-    keys.add(url.replace(/^\/+/, ''));
-  }
-
-  if (env?.BLOG_CONTENT) {
-    for (const key of keys) {
-      const markdown = await loadFromR2(env, key);
-      if (!markdown) continue;
-      const { content } = parseFrontmatter(markdown);
-      const processedContent = processWikilinks(content, addMarkdownLinks);
-      return md.render(processedContent);
-    }
-  }
-
-  if (url && url.startsWith('http')) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const markdown = await response.text();
-        const { content } = parseFrontmatter(markdown);
-        const processedContent = processWikilinks(content, addMarkdownLinks);
-        return md.render(processedContent);
-      }
-    } catch (error) {
-      console.error(`Failed to fetch MOC from ${url}:`, error);
-    }
-  }
-
-  return null;
+  const processedContent = processWikilinks(note.content, addMarkdownLinks);
+  return md.render(processedContent);
 }
 
-export async function fetchPartial(partial: string, currentDomain?: string, addMarkdownLinks = false, env?: RuntimeEnv): Promise<string | null> {
-  if (!currentDomain) return null;
-
-  const bases = (import.meta.env.PUBLIC_MD_BASES ?? '')
-    .split(';')
-    .map((base) => base.trim().replace(/\/$/, ''))
-    .filter(Boolean);
-  const key = `${currentDomain}/${partial}.md`;
-
-  if (env?.BLOG_CONTENT) {
-    const markdown = await loadFromR2(env, key);
-    if (markdown) {
-      const { content } = parseFrontmatter(markdown);
-      const processedContent = processWikilinks(content, addMarkdownLinks);
-      return md.render(processedContent);
-    }
-  }
-
-  for (const base of bases) {
-    const url = `${base}/${key}`;
-    try {
-      const response = await fetch(url);
-      if (!response.ok) continue;
-
-      const markdown = await response.text();
-      const { content } = parseFrontmatter(markdown);
-      const processedContent = processWikilinks(content, addMarkdownLinks);
-      return md.render(processedContent);
-    } catch (error) {
-      console.error(`Failed to fetch partial ${partial} from ${url}:`, error);
-    }
-  }
-
-  return null;
-}
 
 export function isPrivate(frontmatter: NoteFrontmatter): boolean {
   return frontmatter.status === 'private';
@@ -310,8 +215,8 @@ export function getCurrentDomain(host: string): string {
 
 export function generateMetaTags(frontmatter: NoteFrontmatter, slug: string) {
   const title = frontmatter.title || slug.replace(/-/g, ' ');
-  const description = frontmatter.description || `Заметка: ${title}`;
-  const siteTitle = "Zettelkasten Blog";
+  const description = frontmatter.description || `Note: ${title}`;
+  const siteTitle = "Blog";
   const fullTitle = title === siteTitle ? title : `${title} | ${siteTitle}`;
   const canonical = frontmatter.domain ? `https://${frontmatter.domain}/n/${slug}` : `/n/${slug}`;
 

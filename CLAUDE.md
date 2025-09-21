@@ -71,15 +71,54 @@ export function generateMetaTags(frontmatter: NoteFrontmatter, slug: string)
 # Установка зависимостей
 pnpm install
 
-# Запуск dev сервера
+# Запуск dev сервера с R2 эмуляцией (рекомендуется)
 pnpm dev
+
+# Запуск только Astro (без R2, нужен PUBLIC_MD_BASES)
+pnpm dev:astro
 
 # Сборка для продакшена
 pnpm build
 
 # Деплой на Cloudflare Pages
 pnpm deploy
+
+# Тесты
+pnpm test
+pnpm test:run
 ```
+
+### Локальная разработка
+
+```bash
+# Запуск dev сервера
+pnpm dev
+```
+
+**Автоматический режим:**
+- В **dev** режиме: читает контент из папки `dev-content/`
+- В **production**: использует R2 или публичный URL как fallback
+
+**Структура локального контента:**
+```
+dev-content/
+├── domain-a.example/
+│   ├── index.md
+│   ├── test-note.md
+│   └── private-note.md
+├── domain-b.example/
+│   └── другие-заметки.md
+└── shared/
+    └── global-note.md
+```
+
+**Примеры тестовых URL:**
+- `http://localhost:4322/` - главная (domain-a.example/index.md) с header/footer
+- `http://localhost:4322/?domain=domain-b.example` - минималистичная главная без header
+- `http://localhost:4322/n/test-note` - тестовая заметка с header/footer
+- `http://localhost:4322/n/minimal-note?domain=domain-b.example` - заметка без header/footer
+- `http://localhost:4322/n/private-note` - приватная заметка
+- `http://localhost:4322/n/shared/global-note` - общая заметка
 
 ### Работа с R2 контентом
 > Приложение использует R2-биндинг `BLOG_CONTENT` (bucket `sgr-blog-content`) и индекс Vectorize `VECTOR_INDEX` (`autorag-blog-deep`), объявленные в `wrangler.toml`. Никаких дополнительных ключей или URL в `.env` не требуется.
@@ -110,6 +149,20 @@ curl "http://localhost:4322/"
 ```
 
 ## Работа с контентом
+
+### Header и Footer (опционально)
+- **header.md** — опциональный заголовок для домена
+- **footer.md** — опциональный подвал для домена
+- **index.md** — обязательная главная страница
+
+**Приоритет поиска:**
+1. Домен-специфичный файл: `{domain}/header.md`
+2. Общий файл: `shared/header.md`
+3. Если не найден — не отображается (header) или fallback email (footer)
+
+**Тестирование локально:**
+- С header/footer: `?domain=domain-a.example`
+- Без header/footer: `?domain=domain-b.example`
 
 ### Frontmatter формат
 ```yaml

@@ -1,5 +1,5 @@
 ---
-import { fetchNote, isPrivate, matchesDomain, generateMetaTags, getCurrentDomain, fetchPartial } from '../../lib/md.ts';
+import { fetchNote, isPrivate, matchesDomain, generateMetaTags, getCurrentDomain, fetchPage } from '../../lib/md.ts';
 
 const slugParam = Astro.params.slug;
 if (!slugParam) {
@@ -9,13 +9,15 @@ if (!slugParam) {
 const slug = Array.isArray(slugParam) ? slugParam.join('/') : slugParam;
 
 const host = Astro.request.headers.get('host') || '';
-const currentDomain = getCurrentDomain(host);
+const url = new URL(Astro.request.url);
+const domainOverride = url.searchParams.get('domain');
+const currentDomain = domainOverride || getCurrentDomain(host);
 const env = Astro.locals?.cloudflare?.env ?? Astro.locals?.runtime?.env;
 
 const [note, headerHtml, footerPartial] = await Promise.all([
-  fetchNote(slug, currentDomain, env),
-  fetchPartial('header', currentDomain, true, env),
-  fetchPartial('footer', currentDomain, true, env)
+  fetchNote(slug, currentDomain, env, Astro.request),
+  fetchPage('header', true, currentDomain, env, Astro.request),
+  fetchPage('footer', true, currentDomain, env, Astro.request)
 ]);
 if (!note) {
   return new Response('Note not found', { status: 404 });
@@ -240,7 +242,7 @@ const metaWithCanonical = {
       </nav>
 
       <article>
-        {note.frontmatter.title && (
+        {note.frontmatter.title && !note.hasH1 && (
           <h1>{note.frontmatter.title}</h1>
         )}
         <Fragment set:html={note.html} />

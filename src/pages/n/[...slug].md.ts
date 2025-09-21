@@ -1,6 +1,24 @@
 import type { APIRoute } from 'astro';
 import { getCurrentDomain } from '../../lib/md.ts';
 
+async function loadFromR2(env: any, key: string): Promise<string | null> {
+  if (!env?.BLOG_CONTENT) return null;
+  try {
+    const object: any = await env.BLOG_CONTENT.get(key);
+    if (!object) return null;
+    if (typeof object.text === 'function') {
+      return await object.text();
+    }
+    if (object.body) {
+      const response = new Response(object.body);
+      return await response.text();
+    }
+  } catch (error) {
+    console.error(`Failed to load ${key} from R2:`, error);
+  }
+  return null;
+}
+
 export const GET: APIRoute = async ({ params, request, locals }) => {
   const slugParam = params.slug;
   if (!slugParam) {
@@ -9,104 +27,55 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 
   const slug = Array.isArray(slugParam) ? slugParam.join('/') : slugParam;
 
-  const bases = (import.meta.env.PUBLIC_MD_BASES ?? '')
-    .split(';')
-    .map((base) => base.trim())
-    .filter(Boolean);
   const host = request.headers.get('host') || '';
-  const currentDomain = getCurrentDomain(host);
+  const url = new URL(request.url);
+  const domainOverride = url.searchParams.get('domain');
+  const currentDomain = domainOverride || getCurrentDomain(host);
   const env = locals?.cloudflare?.env ?? locals?.runtime?.env;
 
-  const endpoints: string[] = [];
-  const visited = new Set<string>();
+  // Simplified domain-aware note fetching (same logic as fetchNote)
+  const tryKeys: string[] = [];
 
-  const segments = slug.split('/').filter(Boolean);
-  const firstSegment = segments[0];
-  const rest = segments.slice(1).join('/');
-
-  const addEndpoint = (url: string) => {
-    if (!visited.has(url)) {
-      endpoints.push(url);
-      visited.add(url);
-    }
-  };
-
-  const r2Keys = new Set<string>();
-
-  const addCandidate = (key: string) => {
-    if (!key) return;
-    r2Keys.add(key);
-    addEndpoint(`/api/r2/${key}`);
-  };
-
+  // Priority order: domain-specific, shared, legacy
   if (currentDomain) {
-    addCandidate(`${currentDomain}/${slug}.md`);
+    tryKeys.push(`${currentDomain}/${slug}.md`);
   }
+  tryKeys.push(`shared/${slug}.md`);
+  tryKeys.push(`${slug}.md`);
 
-  if (firstSegment === 'shared') {
-    const sharedPath = rest || 'index';
-    addCandidate(`shared/${sharedPath}.md`);
-  }
-
-  if (firstSegment === 'indexes') {
-    const indexPath = rest || 'index';
-    addCandidate(`indexes/${indexPath}.md`);
-  }
-
-  if (firstSegment && firstSegment.includes('.') && rest) {
-    const targetDomain = firstSegment;
-    const domainPath = rest;
-    addCandidate(`${targetDomain}/${domainPath}.md`);
-  }
-
-  if (env?.BLOG_CONTENT && r2Keys.size > 0) {
-    for (const key of r2Keys) {
-      try {
-        const object: any = await env.BLOG_CONTENT.get(key);
-        if (!object) continue;
-        const markdown = typeof object.text === 'function' ? await object.text() : await new Response(object.body).text();
-
-        // Set cache headers
-        const headers = new Headers();
-        headers.set('Content-Type', 'text/plain; charset=utf-8');
-        headers.set('Cache-Control', 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800');
-
-        const etag = object.httpEtag || object.etag;
-        const lastModified = object.uploaded ? new Date(object.uploaded).toUTCString() : undefined;
-
-        if (etag) headers.set('ETag', etag);
-        if (lastModified) headers.set('Last-Modified', lastModified);
-
-        return new Response(markdown, { status: 200, headers });
-      } catch (error) {
-        console.error(`Failed to fetch from R2 key ${key}:`, error);
+  // Try R2 first if available
+  if (env?.BLOG_CONTENT) {
+    for (const key of tryKeys) {
+      const markdown = await loadFromR2(env, key);
+      if (markdown) {
+        return new Response(markdown, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'public, max-age=0, s-maxage=86400'
+          }
+        });
       }
     }
   }
 
-  for (const url of endpoints) {
+  // Fallback to API endpoints
+  for (const key of tryKeys) {
     try {
-      const response = await fetch(url);
-
+      const apiUrl = new URL(`/api/r2/${key}`, request.url);
+      const response = await fetch(apiUrl.toString());
       if (response.ok) {
         const markdown = await response.text();
-
-        // Set cache headers
-        const headers = new Headers();
-        headers.set('Content-Type', 'text/plain; charset=utf-8');
-        headers.set('Cache-Control', 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800');
-
-        // Pass through ETag and Last-Modified if available
-        const etag = response.headers.get('etag');
-        const lastModified = response.headers.get('last-modified');
-
-        if (etag) headers.set('ETag', etag);
-        if (lastModified) headers.set('Last-Modified', lastModified);
-
-        return new Response(markdown, { status: 200, headers });
+        return new Response(markdown, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'public, max-age=0, s-maxage=86400'
+          }
+        });
       }
     } catch (error) {
-      console.error(`Failed to fetch from ${url}:`, error);
+      console.error(`Failed to fetch ${key}:`, error);
     }
   }
 

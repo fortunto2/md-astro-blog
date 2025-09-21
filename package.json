@@ -8,6 +8,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "deploy": "pnpm build && wrangler pages deploy dist",
+    "test": "vitest",
+    "test:run": "vitest run",
     "r2:put": "wrangler r2 object put",
     "r2:delete": "wrangler r2 object delete"
   },
@@ -16,5 +18,9 @@
     "astro": "^5.13.9",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "vitest": "^3.2.4"
   }
 }

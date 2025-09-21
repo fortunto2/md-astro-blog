@@ -1,17 +1,19 @@
 ---
-import { fetchNote, getCurrentDomain, fetchPartial } from '../lib/md.ts';
+import { fetchNote, getCurrentDomain, fetchPage } from '../lib/md.ts';
 
 const host = Astro.request.headers.get('host') || '';
-const currentDomain = getCurrentDomain(host);
+const url = new URL(Astro.request.url);
+const domainOverride = url.searchParams.get('domain');
+const currentDomain = domainOverride || getCurrentDomain(host);
 const env = Astro.locals?.cloudflare?.env ?? Astro.locals?.runtime?.env;
 
 const [headerHtml, html, footerPartial] = await Promise.all([
-  fetchPartial('header', currentDomain, true, env),
+  fetchPage('header', true, currentDomain, env, Astro.request),
   (async () => {
-    const note = await fetchNote('index', currentDomain, env);
+    const note = await fetchNote('index', currentDomain, env, Astro.request);
     return note?.html ?? null;
   })(),
-  fetchPartial('footer', currentDomain, true, env)
+  fetchPage('footer', true, currentDomain, env, Astro.request)
 ]);
 
 if (!html) {
