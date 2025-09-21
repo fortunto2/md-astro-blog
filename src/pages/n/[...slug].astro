@@ -1,0 +1,284 @@
+---
+import { fetchNote, isPrivate, matchesDomain, generateMetaTags, getCurrentDomain, fetchPartial } from '../../lib/md.ts';
+
+const slugParam = Astro.params.slug;
+if (!slugParam) {
+  return new Response('Slug is required', { status: 400 });
+}
+
+const slug = Array.isArray(slugParam) ? slugParam.join('/') : slugParam;
+
+const host = Astro.request.headers.get('host') || '';
+const currentDomain = getCurrentDomain(host);
+const env = Astro.locals?.cloudflare?.env ?? Astro.locals?.runtime?.env;
+
+const [note, headerHtml, footerPartial] = await Promise.all([
+  fetchNote(slug, currentDomain, env),
+  fetchPartial('header', currentDomain, true, env),
+  fetchPartial('footer', currentDomain, true, env)
+]);
+if (!note) {
+  return new Response('Note not found', { status: 404 });
+}
+
+// Check domain matching
+if (!matchesDomain(note.frontmatter, host)) {
+  return new Response('Not found', { status: 404 });
+}
+
+// Check if private and redirect to access control if needed
+const isNotePrivate = isPrivate(note.frontmatter);
+
+const meta = generateMetaTags(note.frontmatter, slug);
+
+// Set cache headers
+Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800');
+
+const getPrimaryDomain = (domain: string) => {
+  const parts = domain.split('.');
+  if (parts.length >= 2) {
+    return parts.slice(-2).join('.');
+  }
+  return domain;
+};
+
+const fallbackFooter = (() => {
+  if (!currentDomain) return null;
+  const primaryDomain = getPrimaryDomain(currentDomain);
+  const email = `info@${primaryDomain}`;
+  return `<p><a href='mailto:${email}'>${email}</a></p>`;
+})();
+
+const footerHtml = footerPartial || fallbackFooter;
+
+const canonicalHost = host.includes('localhost') || host.includes('127.0.0.1')
+  ? `http://${host}`
+  : `https://${host}`;
+
+const canonicalUrl = meta.canonical?.startsWith('http')
+  ? meta.canonical
+  : `${canonicalHost}${meta.canonical?.startsWith('/') ? meta.canonical : `/n/${slug}`}`;
+
+const metaWithCanonical = {
+  ...meta,
+  canonical: canonicalUrl,
+  og: {
+    ...meta.og,
+    url: canonicalUrl
+  }
+};
+---
+
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{metaWithCanonical.title}</title>
+    <meta name="description" content={metaWithCanonical.description} />
+    <meta name="robots" content={metaWithCanonical.robots} />
+    <link rel="canonical" href={metaWithCanonical.canonical} />
+
+    <!-- OG tags -->
+    <meta property="og:title" content={metaWithCanonical.og.title} />
+    <meta property="og:description" content={metaWithCanonical.og.description} />
+    <meta property="og:type" content={metaWithCanonical.og.type} />
+    <meta property="og:url" content={metaWithCanonical.og.url} />
+    {metaWithCanonical.og.image && <meta property="og:image" content={metaWithCanonical.og.image} />}
+    {metaWithCanonical.og.publishedTime && <meta property="article:published_time" content={metaWithCanonical.og.publishedTime} />}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={metaWithCanonical.og.title} />
+    <meta name="twitter:description" content={metaWithCanonical.og.description} />
+    {metaWithCanonical.og.image && <meta name="twitter:image" content={metaWithCanonical.og.image} />}
+
+    <style>
+      body {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 2rem;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        line-height: 1.55;
+      }
+
+      .prose {
+        color: #333;
+      }
+
+      .prose h1 {
+        color: #111;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .prose h2 {
+        color: #222;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+      }
+
+      .prose h3 {
+        color: #333;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .prose a {
+        color: #0066cc;
+        text-decoration: none;
+      }
+
+      .prose a:hover {
+        text-decoration: underline;
+      }
+
+      .prose ul {
+        padding-left: 1.5rem;
+      }
+
+      .prose li {
+        margin: 0.5rem 0;
+      }
+
+      .prose blockquote {
+        border-left: 4px solid #ddd;
+        margin: 1.5rem 0;
+        padding: 0 1rem;
+        color: #666;
+        font-style: italic;
+      }
+
+      .prose code {
+        background: #f5f5f5;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-size: 0.9em;
+      }
+
+      .prose pre code {
+        background: none;
+        padding: 0;
+      }
+
+      .hljs {
+        background: #f8f8f8;
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 0.9em;
+      }
+
+      .note-meta {
+        border-top: 1px solid #eee;
+        margin-top: 3rem;
+        padding-top: 1rem;
+        font-size: 0.9em;
+        color: #666;
+      }
+
+      .note-meta a {
+        color: #666;
+      }
+
+      .private-notice {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        color: #856404;
+      }
+
+      .tags {
+        margin-top: 1rem;
+      }
+
+      .tag {
+        display: inline-block;
+        background: #f0f0f0;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.8em;
+        margin: 0.2rem 0.2rem 0.2rem 0;
+        color: #666;
+      }
+
+      nav {
+        margin-bottom: 2rem;
+      }
+
+      nav a {
+        color: #666;
+        text-decoration: none;
+        font-size: 0.9em;
+      }
+
+      nav a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    {headerHtml && (
+      <header>
+        <Fragment set:html={headerHtml} />
+      </header>
+    )}
+    <div class="prose">
+      {isNotePrivate && (
+        <div class="private-notice">
+          🔒 This is a private note. Access is restricted and content is not indexed by search engines.
+        </div>
+      )}
+
+      <nav>
+        <a href="/">← Back to index</a>
+        <span> • </span>
+        <a href={`/n/${slug}.md`}>View source (.md)</a>
+      </nav>
+
+      <article>
+        {note.frontmatter.title && (
+          <h1>{note.frontmatter.title}</h1>
+        )}
+        <Fragment set:html={note.html} />
+      </article>
+
+      <div class="note-meta">
+        {note.frontmatter.date && (
+          <div>
+            <strong>Date:</strong> {note.frontmatter.date}
+          </div>
+        )}
+
+        {note.frontmatter.category && (
+          <div>
+            <strong>Category:</strong> {note.frontmatter.category}
+          </div>
+        )}
+
+        {note.frontmatter.tags && note.frontmatter.tags.length > 0 && (
+          <div class="tags">
+            <strong>Tags:</strong>
+            {note.frontmatter.tags.map(tag => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {note.frontmatter.aliases && note.frontmatter.aliases.length > 0 && (
+          <div>
+            <strong>Aliases:</strong> {note.frontmatter.aliases.join(', ')}
+          </div>
+        )}
+      </div>
+    </div>
+    {footerHtml && (
+      <footer>
+        <Fragment set:html={footerHtml} />
+      </footer>
+    )}
+  </body>
+</html>

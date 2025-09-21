@@ -6,9 +6,15 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy": "pnpm build && wrangler pages deploy dist",
+    "r2:put": "wrangler r2 object put",
+    "r2:delete": "wrangler r2 object delete"
   },
   "dependencies": {
-    "astro": "^5.13.9"
+    "@astrojs/cloudflare": "^12.6.8",
+    "astro": "^5.13.9",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0"
   }
 }
