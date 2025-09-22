@@ -105,26 +105,26 @@ export class SearchPage {
       </div>
     ` : '';
 
-    const resultsHtml = data.results.map(result => `
-      <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-        <h3 class="text-lg font-semibold mb-2">
-          <a href="${result.url}?highlight=${encodeURIComponent(data.query)}" 
-             data-search-link="${result.url}" 
-             class="text-blue-600 hover:text-blue-800 hover:underline">
-            ${result.title}
-          </a>
-        </h3>
-        <p class="text-gray-700 mb-3">${result.description}</p>
-        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-          <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">
-            Relevance: ${(result.score * 100).toFixed(1)}%
-          </span>
-          ${result.date ? `<span>• ${result.date}</span>` : ''}
-          ${result.tags && result.tags.length > 0 ? `<span>• Tags: ${result.tags.join(', ')}</span>` : ''}
-          ${result.source ? `<span>• ${result.source}</span>` : ''}
+      const resultsHtml = data.results.map(result => `
+        <div class="search-result border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+          <h3 class="text-lg font-semibold mb-2">
+            <a href="${result.url}?highlight=${encodeURIComponent(data.query)}"
+               data-search-link="${result.url}"
+               class="text-blue-600 hover:text-blue-800 hover:underline">
+              ${result.title}
+            </a>
+          </h3>
+          <p class="text-gray-700 mb-3">${result.description}</p>
+          <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+            <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">
+              Relevance: ${(result.score * 100).toFixed(1)}%
+            </span>
+            ${result.date ? `<span>• ${result.date}</span>` : ''}
+            ${result.tags && result.tags.length > 0 ? `<span>• Tags: ${result.tags.join(', ')}</span>` : ''}
+            ${result.source ? `<span>• ${result.source}</span>` : ''}
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
 
     this.results.innerHTML = `
       ${aiAnswerHtml}

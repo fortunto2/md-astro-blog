@@ -58,12 +58,15 @@ p {
   line-height: 1.4 !important;
 }
 
-/* Links - classic web style */
+/* Links - classic web style with word wrapping */
 a {
   color: #0000EE !important;
   text-decoration: underline !important;
   text-decoration-thickness: 1px !important;
   text-underline-offset: 2px !important;
+  word-break: break-all !important;
+  overflow-wrap: break-word !important;
+  hyphens: auto !important;
 }
 
 a:visited {
@@ -156,4 +159,18 @@ hr {
   border: none !important;
   border-top: 1px solid #f0f0f0 !important;
   margin: 1em 0 !important;
+}
+
+/* Long text and URL handling */
+.search-result, .prose, article, main, p {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  hyphens: auto !important;
+}
+
+/* Special handling for very long URLs and text */
+.search-result a, .prose a {
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
 }
