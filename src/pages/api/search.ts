@@ -130,16 +130,68 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
   }
 
-  // Simple dev mode fallback - mock search results
+  // Try direct vector search as fallback
+  if (env?.VECTOR_INDEX && env?.AI) {
+    try {
+      console.log('Trying direct vector search...');
+
+      // Generate embeddings for search
+      const embeddings = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+        text: [query.trim()]
+      });
+
+      // Search vector index
+      const vectorResults = await env.VECTOR_INDEX.query(embeddings.data[0], {
+        topK: 5,
+        returnMetadata: true
+      });
+
+      console.log('Vector search results:', vectorResults);
+
+      if (vectorResults?.matches?.length > 0) {
+        const results = vectorResults.matches.map((match: any, index: number) => {
+          const metadata = match.metadata || {};
+          const slug = match.id.includes('/') ? match.id.split('/').pop() : match.id;
+
+          return {
+            title: metadata.title || slug || 'Untitled',
+            description: metadata.description || metadata.content?.substring(0, 200) + '...' || 'No description available',
+            url: `/n/${slug}`,
+            score: match.score || (1 - index * 0.1),
+            date: metadata.date || null,
+            tags: metadata.tags || [],
+            source: 'vector'
+          };
+        });
+
+        return new Response(JSON.stringify({
+          query: query.trim(),
+          total: results.length,
+          results: results,
+          answer: `Found ${results.length} results using vector search.`
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=60, s-maxage=300'
+          }
+        });
+      }
+    } catch (vectorError) {
+      console.error('Vector search failed:', vectorError);
+    }
+  }
+
+  // Final fallback - mock search results
   const mockResults = [
     {
-      title: `Mock result for "${query}"`,
-      description: 'This is a mock search result for development. AutoRAG is only available in production.',
+      title: `No AutoRAG results for "${query}"`,
+      description: 'AutoRAG search is not working. Check Cloudflare bindings configuration.',
       url: '/n/test-note',
-      score: 0.9,
+      score: 0.5,
       date: '2025-09-22',
-      tags: ['mock', 'development'],
-      source: 'dev-mock'
+      tags: ['fallback'],
+      source: 'fallback'
     }
   ];
 
@@ -147,7 +199,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
     query: query.trim(),
     total: mockResults.length,
     results: mockResults,
-    answer: `This is a development mock response for your search query: "${query}". AutoRAG will work in production.`
+    answer: `AutoRAG search failed for query: "${query}". Check console logs for details.`,
+    debug: {
+      hasAI: !!env?.AI,
+      hasVectorIndex: !!env?.VECTOR_INDEX,
+      environment: env?.NODE_ENV || 'unknown'
+    }
   }), {
     status: 200,
     headers: {
