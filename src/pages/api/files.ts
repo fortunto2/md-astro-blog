@@ -57,13 +57,28 @@ export const GET: APIRoute = async ({ locals, url }) => {
     let originalName = 'Unknown';
 
     if (keyParts) {
-      // Parse: timestamp-hash-originalname
-      const match = keyParts.match(/^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-([a-f0-9]{8})-(.+)$/);
+      // Try to parse: timestamp-hash-originalname (new format)
+      let match = keyParts.match(/^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-([a-f0-9]{8})-(.+)$/);
       if (match) {
         const [, timestamp, hash, filename] = match;
         // Convert timestamp back to ISO format
         uploadedDate = timestamp.replace(/-/g, ':').replace(/(\d{4}):(\d{2}):(\d{2})T(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1-$2-$3T$4:$5:$6.$7Z');
         originalName = filename.replace(/_/g, ' '); // Convert underscores back to spaces
+      } else {
+        // Try to parse: timestamp-longhash-originalname (old format)
+        match = keyParts.match(/^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-([a-f0-9-]{36})-(.+)$/);
+        if (match) {
+          const [, timestamp, hash, filename] = match;
+          uploadedDate = timestamp.replace(/-/g, ':').replace(/(\d{4}):(\d{2}):(\d{2})T(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1-$2-$3T$4:$5:$6.$7Z');
+          originalName = filename.replace(/_/g, ' ');
+        } else {
+          // Fallback: use filename as-is for manually uploaded files
+          originalName = keyParts;
+          // Try to extract date from R2 object metadata if available
+          if (obj.uploaded || obj.lastModified) {
+            uploadedDate = obj.uploaded || obj.lastModified;
+          }
+        }
       }
     }
 
