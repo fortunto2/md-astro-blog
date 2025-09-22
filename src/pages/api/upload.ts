@@ -44,11 +44,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Generate safe filename with timestamp and UUID
-    const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const uuid = crypto.randomUUID();
-    const key = `uploads/${timestamp}-${uuid}-${safeName}`;
+  // Generate safe filename with timestamp and short hash
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const shortHash = crypto.randomUUID().slice(0, 8); // Short 8-char hash
+  const key = `uploads/${timestamp}-${shortHash}-${safeName}`;
 
     // Write file to R2 with proper metadata
     await env.BLOG_CONTENT.put(key, file.stream(), {

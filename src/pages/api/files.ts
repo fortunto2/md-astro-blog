@@ -49,23 +49,41 @@ export const GET: APIRoute = async ({ locals, url }) => {
       });
     }
 
-    // Transform R2 objects to convenient format
-    const files: UploadedFile[] = listResult.objects.map((obj: any) => {
-      // Extract original name from customMetadata or from key
-      const originalName = obj.customMetadata?.originalName || 
-                          obj.key.split('/').pop()?.replace(/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z-[a-f0-9-]+-/, '') ||
-                          obj.key.split('/').pop() ||
-                          'Unknown';
+  // Transform R2 objects to convenient format
+  const files: UploadedFile[] = listResult.objects.map((obj: any) => {
+    // Extract timestamp and original name from key
+    const keyParts = obj.key.split('/').pop(); // Get filename part
+    let uploadedDate = new Date().toISOString();
+    let originalName = 'Unknown';
 
-      return {
-        key: obj.key,
-        originalName: originalName,
-        size: obj.size || 0,
-        uploaded: obj.uploaded || obj.lastModified || new Date().toISOString(),
-        contentType: obj.httpMetadata?.contentType || 'application/octet-stream',
-        url: `/api/file/${obj.key}`
-      };
-    });
+    if (keyParts) {
+      // Parse: timestamp-hash-originalname
+      const match = keyParts.match(/^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-([a-f0-9]{8})-(.+)$/);
+      if (match) {
+        const [, timestamp, hash, filename] = match;
+        // Convert timestamp back to ISO format
+        uploadedDate = timestamp.replace(/-/g, ':').replace(/(\d{4}):(\d{2}):(\d{2})T(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1-$2-$3T$4:$5:$6.$7Z');
+        originalName = filename.replace(/_/g, ' '); // Convert underscores back to spaces
+      }
+    }
+
+    // Fallback to customMetadata if available
+    if (obj.customMetadata?.originalName) {
+      originalName = obj.customMetadata.originalName;
+    }
+    if (obj.customMetadata?.uploadedAt) {
+      uploadedDate = obj.customMetadata.uploadedAt;
+    }
+
+    return {
+      key: obj.key,
+      originalName: originalName,
+      size: obj.size || 0,
+      uploaded: uploadedDate,
+      contentType: obj.httpMetadata?.contentType || 'application/octet-stream',
+      url: `/api/file/${obj.key}`
+    };
+  });
 
     // Sort by upload date (newest first)
     files.sort((a, b) => new Date(b.uploaded).getTime() - new Date(a.uploaded).getTime());
