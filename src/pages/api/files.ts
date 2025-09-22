@@ -11,7 +11,7 @@ interface UploadedFile {
   key: string;
   originalName: string;
   size: number;
-  lastModified: string;
+  uploaded: string;
   contentType: string;
   url: string;
 }
@@ -61,14 +61,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
         key: obj.key,
         originalName: originalName,
         size: obj.size || 0,
-        lastModified: obj.uploaded || obj.lastModified || new Date().toISOString(),
+        uploaded: obj.uploaded || obj.lastModified || new Date().toISOString(),
         contentType: obj.httpMetadata?.contentType || 'application/octet-stream',
         url: `/api/file/${obj.key}`
       };
     });
 
     // Sort by upload date (newest first)
-    files.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+    files.sort((a, b) => new Date(b.uploaded).getTime() - new Date(a.uploaded).getTime());
 
     return new Response(JSON.stringify({
       files,
