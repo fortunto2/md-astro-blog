@@ -44,8 +44,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+  // Transliterate function for Cyrillic and other non-latin characters
+  function transliterate(text: string): string {
+    const cyrillicMap: { [key: string]: string } = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh',
+      'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+      'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts',
+      'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+      'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo', 'Ж': 'Zh',
+      'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O',
+      'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts',
+      'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Sch', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya'
+    };
+
+    return text
+      .split('')
+      .map(char => cyrillicMap[char] || char)
+      .join('')
+      .replace(/[^\w.\-\s]+/g, '') // Remove special chars but keep spaces
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  }
+
   // Generate safe filename with timestamp and short hash
-  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+  const safeName = transliterate(file.name);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const shortHash = crypto.randomUUID().slice(0, 8); // Short 8-char hash
   const key = `uploads/${timestamp}-${shortHash}-${safeName}`;
