@@ -21,7 +21,10 @@
       "eslint --fix",
       "git add"
     ],
-    "*.{ts,js}": [
+    "src/lib/*.{ts,js}": [
+      "vitest run --reporter=verbose --run"
+    ],
+    "src/pages/api/*.{ts,js}": [
       "vitest run --reporter=verbose --run"
     ]
   },

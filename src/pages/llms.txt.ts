@@ -37,7 +37,7 @@ Collection of notes, articles and thoughts in Zettelkasten format.
           !obj.key.includes('footer') &&
           !obj.key.includes('index')) {
         const slug = obj.key.replace(/\.md$/, '').replace(/^[^/]+\//, '');
-        const title = slug.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
+        const title = slug.replace(/-/g, ' ').replace(/^\w/, (c: string) => c.toUpperCase());
         content += `- [${title}](${baseUrl}/n/${slug}.md)\n`;
       }
     }
