@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "blog-search-sse": {
+      "type": "sse",
+      "url": "https://mcp.akbuzat.net/sse"
+    },
     "AI_Gateway": {
       "type": "sse",
       "url": "https://ai-gateway.mcp.cloudflare.com/sse"
@@ -15,14 +19,6 @@
     "astro-docs": {
       "type": "http",
       "url": "https://mcp.docs.astro.build/mcp"
-    },
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp"
-    },
-    "blog2": {
-      "type": "sse",
-      "url": "https://my-mcp-server.nameless-sunset-8f24.workers.dev/sse"
     }
   }
 }

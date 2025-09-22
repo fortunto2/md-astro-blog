@@ -27,3 +27,6 @@ pnpm-debug.log*
 .husky/*
 !.husky/pre-commit
 !.husky/_/husky.sh
+.kilocode/
+
+ai/
