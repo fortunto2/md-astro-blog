@@ -19,8 +19,16 @@ export class SearchPage {
     // Search on page load if query exists
     const urlParams = new URLSearchParams(window.location.search);
     const initialQuery = urlParams.get('q');
+    const initialMode = urlParams.get('mode') || 'search';
+
+    // Set initial mode
+    const modeRadio = document.querySelector(`input[name="mode"][value="${initialMode}"]`);
+    if (modeRadio) {
+      modeRadio.checked = true;
+    }
+
     if (initialQuery) {
-      this.performSearch(initialQuery);
+      this.performSearch(initialQuery, initialMode);
     }
   }
 
@@ -29,24 +37,28 @@ export class SearchPage {
     const query = this.input.value.trim();
     if (!query) return;
 
+    // Get selected search mode
+    const mode = document.querySelector('input[name="mode"]:checked')?.value || 'search';
+
     // Update URL
     const url = new URL(window.location);
     url.searchParams.set('q', query);
+    url.searchParams.set('mode', mode);
     window.history.pushState({}, '', url);
 
-    await this.performSearch(query);
+    await this.performSearch(query, mode);
   }
 
-  async performSearch(query) {
+  async performSearch(query, mode = 'search') {
     if (query.length < 2) {
-      this.showError('Запрос должен содержать минимум 2 символа');
+      this.showError('Query must be at least 2 characters');
       return;
     }
 
     this.setLoading(true);
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&mode=${mode}`);
       const data = await response.json();
 
       if (!response.ok) {

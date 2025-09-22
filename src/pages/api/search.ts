@@ -53,6 +53,7 @@ function getDomainFromHost(host: string): string | undefined {
 export const GET: APIRoute = async ({ url, locals, request }) => {
   const query = url.searchParams.get('q');
   const domainParam = url.searchParams.get('domain');
+  const mode = url.searchParams.get('mode') || 'search'; // 'ai' or 'search'
 
   // Автоматическое определение домена из хоста
   const host = request.headers.get('host') || '';
@@ -75,13 +76,24 @@ export const GET: APIRoute = async ({ url, locals, request }) => {
     try {
       const domainFilter = createDomainFilter(domain);
       
-      // Try aiSearch first (with AI-generated answer)
-      const answer = await env.AI.autorag("blog-deep").aiSearch({
-        query: query.trim(),
-        max_num_results: 10,
-        rewrite_query: true,
-        filters: domainFilter
-      });
+      let answer;
+      if (mode === 'ai') {
+        // AI search with generated answer
+        answer = await env.AI.autorag("blog-deep").aiSearch({
+          query: query.trim(),
+          max_num_results: 10,
+          rewrite_query: true,
+          filters: domainFilter
+        });
+      } else {
+        // Regular search without AI answer
+        answer = await env.AI.autorag("blog-deep").search({
+          query: query.trim(),
+          max_num_results: 10,
+          rewrite_query: true,
+          filters: domainFilter
+        });
+      }
 
       if (answer?.data && answer.data.length > 0) {
         const results = answer.data.map((doc: any, index: number) => {

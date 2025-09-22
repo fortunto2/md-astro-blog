@@ -1,5 +1,5 @@
 ---
-import { fetchNote, getCurrentDomain, fetchPage } from '../lib/md.ts';
+import { fetchNote, getCurrentDomain, fetchPage, generateDefaultHeader } from '../lib/md.ts';
 
 const host = Astro.request.headers.get('host') || '';
 const url = new URL(Astro.request.url);
@@ -19,6 +19,9 @@ const [headerHtml, html, footerPartial] = await Promise.all([
 if (!html) {
   throw new Error('Failed to fetch index content');
 }
+
+// Use default header if not found
+const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
 
 const getPrimaryDomain = (domain: string) => {
   const parts = domain.split('.');
@@ -51,6 +54,7 @@ const canonicalUrl = host.includes('localhost') || host.includes('127.0.0.1')
     <meta name="description" content="Public notes and knowledge graph" />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href={canonicalUrl.endsWith('/') ? canonicalUrl : `${canonicalUrl}/`} />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
     <!-- OG tags -->
     <meta property="og:title" content="Zettelkasten Blog" />
@@ -102,11 +106,9 @@ const canonicalUrl = host.includes('localhost') || host.includes('127.0.0.1')
     </style>
   </head>
   <body>
-    {headerHtml && (
-      <header class="domain-header">
-        <Fragment set:html={headerHtml} />
-      </header>
-    )}
+    <header class="domain-header">
+      <Fragment set:html={finalHeaderHtml} />
+    </header>
     <div class="prose">
       <Fragment set:html={html} />
     </div>

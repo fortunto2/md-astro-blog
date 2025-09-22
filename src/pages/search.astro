@@ -1,5 +1,5 @@
 ---
-import { fetchPage, getCurrentDomain } from '../lib/md.ts';
+import { fetchPage, getCurrentDomain, generateDefaultHeader } from '../lib/md.ts';
 
 const host = Astro.request.headers.get('host') || '';
 const url = new URL(Astro.request.url);
@@ -13,6 +13,9 @@ const [headerHtml, footerPartial] = await Promise.all([
   fetchPage('header', true, currentDomain, env, Astro.request),
   fetchPage('footer', true, currentDomain, env, Astro.request)
 ]);
+
+// Use default header if not found
+const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
 
 const getPrimaryDomain = (domain: string) => {
   const parts = domain.split('.');
@@ -175,6 +178,34 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, s
         margin: 1rem 0;
       }
 
+      .search-mode {
+        display: flex;
+        gap: 1rem;
+        margin: 1rem 0;
+        padding: 0.5rem;
+        background: #f8f8f8;
+        border-radius: 4px;
+      }
+
+      .mode-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-size: 0.9em;
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+      }
+
+      .mode-label:hover {
+        background: #e8e8e8;
+      }
+
+      .mode-label input[type="radio"] {
+        margin: 0;
+      }
+
       nav {
         margin-bottom: 2rem;
       }
@@ -191,11 +222,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, s
     </style>
   </head>
   <body>
-    {headerHtml && (
-      <header>
-        <Fragment set:html={headerHtml} />
-      </header>
-    )}
+    <header>
+      <Fragment set:html={finalHeaderHtml} />
+    </header>
 
     <div class="prose">
       <nav>
@@ -210,12 +239,22 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, s
             type="text"
             class="search-input"
             id="searchInput"
-            placeholder="Введите запрос для поиска..."
+            placeholder="Enter search query..."
             value={query}
             autofocus
           />
+          <div class="search-mode">
+            <label class="mode-label">
+              <input type="radio" name="mode" value="search" checked />
+              🔍 Regular Search
+            </label>
+            <label class="mode-label">
+              <input type="radio" name="mode" value="ai" />
+              🤖 AI Search
+            </label>
+          </div>
           <button type="submit" class="search-button" id="searchButton">
-            Поиск
+            Search
           </button>
         </form>
 

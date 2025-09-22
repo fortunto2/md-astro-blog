@@ -8,6 +8,7 @@ import {
   matchesDomain,
   getCurrentDomain,
   generateMetaTags,
+  generateDefaultHeader,
   type NoteFrontmatter
 } from './md.js';
 
@@ -158,6 +159,27 @@ describe('generateMetaTags', () => {
 
     expect(result.title).toBe('test slug | Blog');
     expect(result.description).toBe('Note: test slug');
+  });
+});
+
+describe('generateDefaultHeader', () => {
+  it('should generate default header HTML', () => {
+    const result = generateDefaultHeader('example.com');
+
+    expect(result).toContain('Blog - Zettelkasten');
+    expect(result).toContain('href="/"');
+    expect(result).toContain('href="/search"');
+    expect(result).toContain('href="/llms.txt"');
+    expect(result).not.toContain('robots.txt');
+    expect(result).not.toContain('sitemap');
+  });
+
+  it('should always use generic "Blog" name', () => {
+    const result1 = generateDefaultHeader('blog.akbuzat.net');
+    const result2 = generateDefaultHeader('example.com');
+
+    expect(result1).toContain('Blog - Zettelkasten');
+    expect(result2).toContain('Blog - Zettelkasten');
   });
 });
 

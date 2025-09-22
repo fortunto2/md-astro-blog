@@ -213,6 +213,13 @@ export function getCurrentDomain(host: string): string {
   return domain;
 }
 
+export function generateDefaultHeader(domain: string): string {
+  const siteName = 'Blog';
+  return md.render(`# [🌟 ${siteName} - Zettelkasten](/)
+
+**Navigation:** [🔍 Search](/search) | [🤖 llms.txt](/llms.txt)`);
+}
+
 export function generateMetaTags(frontmatter: NoteFrontmatter, slug: string) {
   const title = frontmatter.title || slug.replace(/-/g, ' ');
   const description = frontmatter.description || `Note: ${title}`;

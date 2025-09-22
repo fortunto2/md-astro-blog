@@ -1,5 +1,5 @@
 ---
-import { fetchNote, isPrivate, matchesDomain, generateMetaTags, getCurrentDomain, fetchPage } from '../../lib/md.ts';
+import { fetchNote, isPrivate, matchesDomain, generateMetaTags, getCurrentDomain, fetchPage, generateDefaultHeader } from '../../lib/md.ts';
 
 const slugParam = Astro.params.slug;
 if (!slugParam) {
@@ -22,6 +22,9 @@ const [note, headerHtml, footerPartial] = await Promise.all([
 if (!note) {
   return new Response('Note not found', { status: 404 });
 }
+
+// Use default header if not found
+const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
 
 // Check domain matching
 if (!matchesDomain(note.frontmatter, host)) {
@@ -223,11 +226,9 @@ const metaWithCanonical = {
     </style>
   </head>
   <body>
-    {headerHtml && (
-      <header>
-        <Fragment set:html={headerHtml} />
-      </header>
-    )}
+    <header>
+      <Fragment set:html={finalHeaderHtml} />
+    </header>
     <div class="prose">
       {isNotePrivate && (
         <div class="private-notice">

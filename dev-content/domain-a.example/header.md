@@ -2,6 +2,6 @@
 title: 'Header - Domain A'
 ---
 
-# 🌟 Домен А - Zettelkasten
+# [Blog - Zettelkasten](/)
 
-**Навигация:** [Главная](/) | [Тестовая заметка](/n/test-note) | [Общие заметки](/n/shared/global-note)
+**Navigation:** [🔍 Search](/search) | [🤖 llms.txt](/llms.txt)
