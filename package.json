@@ -30,11 +30,14 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.8",
+    "@tailwindcss/vite": "^4.1.13",
     "astro": "^5.13.9",
     "highlight.js": "^11.11.1",
-    "markdown-it": "^14.1.0"
+    "markdown-it": "^14.1.0",
+    "tailwindcss": "^4.1.13"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.18",
     "@types/node": "^24.5.2",
     "@typescript-eslint/eslint-plugin": "^8.44.0",
     "@typescript-eslint/parser": "^8.44.0",

@@ -1,5 +1,6 @@
 ---
 import { fetchNote, getCurrentDomain, fetchPage, generateDefaultHeader } from '../lib/md.ts';
+import '../styles/global.css';
 
 const host = Astro.request.headers.get('host') || '';
 const url = new URL(Astro.request.url);
@@ -46,7 +47,7 @@ const canonicalUrl = host.includes('localhost') || host.includes('127.0.0.1')
 ---
 
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -60,62 +61,28 @@ const canonicalUrl = host.includes('localhost') || host.includes('127.0.0.1')
     <meta property="og:title" content="Zettelkasten Blog" />
     <meta property="og:description" content="Public notes and knowledge graph" />
     <meta property="og:type" content="website" />
-
-    <style>
-      body {
-        max-width: 860px;
-        margin: 0 auto;
-        padding: 2rem;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        line-height: 1.55;
-      }
-
-      .prose {
-        color: #333;
-      }
-
-      .prose h1 {
-        color: #111;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 0.5rem;
-      }
-
-      .prose a {
-        color: #0066cc;
-        text-decoration: none;
-      }
-
-      .prose a:hover {
-        text-decoration: underline;
-      }
-
-      .prose ul {
-        padding-left: 1.5rem;
-      }
-
-      .prose li {
-        margin: 0.5rem 0;
-      }
-
-      .hljs {
-        background: #f8f8f8;
-        padding: 1rem;
-        border-radius: 4px;
-        overflow-x: auto;
-      }
-    </style>
   </head>
+  
   <body>
-    <header class="domain-header">
-      <Fragment set:html={finalHeaderHtml} />
-    </header>
-    <div class="prose">
-      <Fragment set:html={html} />
+    <div class="max-w-4xl mx-auto p-8">
+      <!-- Header -->
+      <header class="mb-8 pb-4 border-b-2 border-black">
+        <Fragment set:html={finalHeaderHtml} />
+      </header>
+      
+      <!-- Main Content -->
+      <main>
+        <article class="prose prose-xl max-w-none">
+          <Fragment set:html={html} />
+        </article>
+      </main>
+      
+      <!-- Footer -->
+      {footerHtml && (
+        <footer class="mt-12 pt-6 border-t-2 border-black text-sm">
+          <Fragment set:html={footerHtml} />
+        </footer>
+      )}
     </div>
-    {footerHtml && (
-      <footer class="domain-footer">
-        <Fragment set:html={footerHtml} />
-      </footer>
-    )}
   </body>
 </html>

@@ -1,0 +1,343 @@
+---
+import { fetchPage, getCurrentDomain, generateDefaultHeader } from '../lib/md.ts';
+import '../styles/global.css';
+
+const host = Astro.request.headers.get('host') || '';
+const url = new URL(Astro.request.url);
+const domainOverride = url.searchParams.get('domain');
+const currentDomain = domainOverride || getCurrentDomain(host);
+const env = Astro.locals?.cloudflare?.env ?? Astro.locals?.runtime?.env;
+
+const [headerHtml, footerPartial] = await Promise.all([
+  fetchPage('header', true, currentDomain, env, Astro.request),
+  fetchPage('footer', true, currentDomain, env, Astro.request)
+]);
+
+// Use default header if not found
+const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
+
+const getPrimaryDomain = (domain: string) => {
+  const parts = domain.split('.');
+  if (parts.length >= 2) {
+    return parts.slice(-2).join('.');
+  }
+  return domain;
+};
+
+const fallbackFooter = (() => {
+  if (!currentDomain) return null;
+  const primaryDomain = getPrimaryDomain(currentDomain);
+  const email = `info@${primaryDomain}`;
+  return `<p><a href="mailto:${email}">${email}</a></p>`;
+})();
+
+const footerHtml = footerPartial || fallbackFooter;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Uploaded Files | Blog</title>
+    <meta name="description" content="Browse uploaded files" />
+    <meta name="robots" content="noindex" />
+  </head>
+  
+  <body>
+    <div class="max-w-6xl mx-auto p-8">
+      <!-- Header -->
+      <header class="mb-6 pb-4 border-b-2 border-black">
+        <Fragment set:html={finalHeaderHtml} />
+      </header>
+
+      <!-- Navigation -->
+      <nav class="mb-6 text-sm">
+        <a href="/">← Back to index</a>
+        <span class="mx-2">•</span>
+        <a href="/upload">📤 Upload Files</a>
+      </nav>
+
+      <!-- Main Content -->
+      <main>
+        <h1>📁 UPLOADED FILES</h1>
+
+        <!-- Controls -->
+        <div class="mb-6">
+          <table>
+            <tr>
+              <td><strong>Search Files:</strong></td>
+              <td>
+                <input
+                  type="text"
+                  id="searchInput"
+                  placeholder="Search by filename..."
+                  class="w-96 p-2 border-2 border-black font-mono"
+                />
+              </td>
+            </tr>
+            <tr>
+              <td><strong>View Mode:</strong></td>
+              <td>
+                <label class="mr-4">
+                  <input type="radio" name="viewMode" value="list" checked class="mr-1" />
+                  📋 List View
+                </label>
+                <label>
+                  <input type="radio" name="viewMode" value="grid" class="mr-1" />
+                  🔲 Grid View
+                </label>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Action:</strong></td>
+              <td>
+                <button
+                  id="refreshBtn"
+                  class="px-4 py-2 bg-gray-200 border-2 border-black font-bold hover:bg-yellow-200 cursor-pointer mr-4"
+                >
+                  🔄 REFRESH
+                </button>
+                <button
+                  id="loadMoreBtn"
+                  class="px-4 py-2 bg-gray-200 border-2 border-black font-bold hover:bg-yellow-200 cursor-pointer hidden"
+                >
+                  📄 LOAD MORE
+                </button>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="text-center py-8 border-2 border-black bg-gray-100 font-bold">
+          Loading files...
+        </div>
+
+        <!-- Files display -->
+        <div id="filesContainer" class="hidden">
+          <div id="filesList"></div>
+          <div id="filesGrid" class="hidden"></div>
+        </div>
+
+        <!-- No files message -->
+        <div id="noFiles" class="hidden text-center py-8 border-2 border-black bg-yellow-100">
+          <p><strong>No files found.</strong></p>
+          <p><a href="/upload">📤 Upload your first file</a></p>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      {footerHtml && (
+        <footer class="mt-12 pt-6 border-t-2 border-black text-sm">
+          <Fragment set:html={footerHtml} />
+        </footer>
+      )}
+    </div>
+
+    <script>
+      // Files page functionality
+      let allFiles: any[] = [];
+      let filteredFiles: any[] = [];
+      let currentCursor: string | null = null;
+      let isLoading = false;
+
+      const loading = document.getElementById('loading') as HTMLElement;
+      const filesContainer = document.getElementById('filesContainer') as HTMLElement;
+      const filesList = document.getElementById('filesList') as HTMLElement;
+      const filesGrid = document.getElementById('filesGrid') as HTMLElement;
+      const noFiles = document.getElementById('noFiles') as HTMLElement;
+      const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+      const refreshBtn = document.getElementById('refreshBtn') as HTMLButtonElement;
+      const loadMoreBtn = document.getElementById('loadMoreBtn') as HTMLButtonElement;
+
+      async function loadFiles(refresh = false) {
+        if (isLoading) return;
+        isLoading = true;
+
+        try {
+          loading.classList.remove('hidden');
+          
+          if (refresh) {
+            allFiles = [];
+            currentCursor = null;
+            loadMoreBtn.classList.add('hidden');
+          }
+
+          const url = currentCursor 
+            ? `/api/files?limit=20&cursor=${encodeURIComponent(currentCursor)}`
+            : '/api/files?limit=20';
+
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to load files');
+          }
+
+          if (refresh) {
+            allFiles = data.files;
+          } else {
+            allFiles.push(...data.files);
+          }
+
+          currentCursor = data.cursor;
+          
+          if (data.truncated && currentCursor) {
+            loadMoreBtn.classList.remove('hidden');
+          } else {
+            loadMoreBtn.classList.add('hidden');
+          }
+
+          filterAndDisplayFiles();
+
+        } catch (error: any) {
+          console.error('Error loading files:', error);
+          alert(`Error loading files: ${error.message}`);
+        } finally {
+          isLoading = false;
+          loading.classList.add('hidden');
+        }
+      }
+
+      function filterAndDisplayFiles() {
+        const searchTerm = searchInput.value.toLowerCase();
+        
+        filteredFiles = allFiles.filter(file => 
+          file.originalName.toLowerCase().includes(searchTerm)
+        );
+
+        displayFiles();
+      }
+
+      function displayFiles() {
+        if (filteredFiles.length === 0) {
+          filesContainer.classList.add('hidden');
+          noFiles.classList.remove('hidden');
+          return;
+        }
+
+        filesContainer.classList.remove('hidden');
+        noFiles.classList.add('hidden');
+
+        const viewMode = document.querySelector('input[name="viewMode"]:checked')?.value;
+        
+        if (viewMode === 'grid') {
+          filesList.classList.add('hidden');
+          filesGrid.classList.remove('hidden');
+          displayGridView();
+        } else {
+          filesGrid.classList.add('hidden');
+          filesList.classList.remove('hidden');
+          displayListView();
+        }
+      }
+
+      function displayListView() {
+        filesList.innerHTML = `
+          <table class="w-full">
+            <thead>
+              <tr>
+                <th class="text-left p-2"><strong>File Name</strong></th>
+                <th class="text-left p-2"><strong>Size</strong></th>
+                <th class="text-left p-2"><strong>Type</strong></th>
+                <th class="text-left p-2"><strong>Uploaded</strong></th>
+                <th class="text-left p-2"><strong>Actions</strong></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredFiles.map(file => `
+                <tr>
+                  <td class="p-2 border-t border-black">
+                    <a href="${file.url}" target="_blank" class="font-mono text-sm">
+                      ${file.originalName}
+                    </a>
+                  </td>
+                  <td class="p-2 border-t border-black">${formatFileSize(file.size)}</td>
+                  <td class="p-2 border-t border-black font-mono text-sm">${file.contentType}</td>
+                  <td class="p-2 border-t border-black">${formatDate(file.uploaded)}</td>
+                  <td class="p-2 border-t border-black">
+                    <a href="${file.url}" target="_blank" class="mr-2">🔗 Open</a>
+                    <button onclick="copyToClipboard('${file.url}')" class="cursor-pointer">📋 Copy URL</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function displayGridView() {
+        filesGrid.innerHTML = `
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            ${filteredFiles.map(file => `
+              <div class="border-2 border-black p-4 bg-white">
+                <div class="mb-2">
+                  <div class="text-center text-4xl mb-2">${getFileIcon(file.contentType)}</div>
+                  <div class="font-mono text-sm text-center break-all">
+                    <a href="${file.url}" target="_blank">${file.originalName}</a>
+                  </div>
+                </div>
+                <div class="text-xs border-t border-black pt-2">
+                  <div><strong>Size:</strong> ${formatFileSize(file.size)}</div>
+                  <div><strong>Type:</strong> ${file.contentType}</div>
+                  <div><strong>Date:</strong> ${formatDate(file.uploaded)}</div>
+                </div>
+                <div class="mt-2 text-center">
+                  <a href="${file.url}" target="_blank" class="mr-2 text-sm">🔗 Open</a>
+                  <button onclick="copyToClipboard('${file.url}')" class="cursor-pointer text-sm">📋 Copy</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      function formatFileSize(bytes: number): string {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      function formatDate(dateString: string): string {
+        return new Date(dateString).toLocaleString();
+      }
+
+      function getFileIcon(contentType: string): string {
+        if (contentType.startsWith('image/')) return '🖼️';
+        if (contentType.startsWith('video/')) return '🎬';
+        if (contentType.startsWith('audio/')) return '🎵';
+        if (contentType.includes('pdf')) return '📕';
+        if (contentType.includes('text')) return '📄';
+        if (contentType.includes('zip') || contentType.includes('archive')) return '📦';
+        return '📄';
+      }
+
+      function copyToClipboard(text: string) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert('URL copied to clipboard!');
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          alert('Failed to copy URL');
+        });
+      }
+
+      // Event listeners
+      searchInput.addEventListener('input', filterAndDisplayFiles);
+      refreshBtn.addEventListener('click', () => loadFiles(true));
+      loadMoreBtn.addEventListener('click', () => loadFiles(false));
+
+      document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+        radio.addEventListener('change', displayFiles);
+      });
+
+      // Make copyToClipboard globally available
+      (window as any).copyToClipboard = copyToClipboard;
+
+      // Initial load
+      loadFiles(true);
+    </script>
+  </body>
+</html>

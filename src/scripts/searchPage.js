@@ -68,7 +68,7 @@ export class SearchPage {
       this.displayResults(data);
     } catch (error) {
       console.error('Search error:', error);
-      this.showError(`Ошибка поиска: ${error.message}`);
+      this.showError(`Search error: ${error.message}`);
     } finally {
       this.setLoading(false);
     }
@@ -76,20 +76,20 @@ export class SearchPage {
 
   setLoading(loading) {
     this.button.disabled = loading;
-    this.button.textContent = loading ? 'Поиск...' : 'Поиск';
+    this.button.textContent = loading ? 'Searching...' : 'Search';
 
     if (loading) {
-      this.results.innerHTML = '<div class="loading">Поиск в процессе...</div>';
+      this.results.innerHTML = '<div class="text-center py-8 text-gray-600">Searching...</div>';
     }
   }
 
   showError(message) {
-    this.results.innerHTML = `<div class="error">${message}</div>`;
+    this.results.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">${message}</div>`;
   }
 
   displayResults(data) {
     if (!data.results || data.results.length === 0) {
-      this.showError(`По запросу "${data.query}" ничего не найдено. Попробуйте другие ключевые слова.`);
+      this.showError(`No results found for "${data.query}". Try different keywords.`);
       return;
     }
 
@@ -97,29 +97,43 @@ export class SearchPage {
     SearchStorage.saveSearchContext(data.query, data.results);
 
     const aiAnswerHtml = data.answer ? `
-      <div class="ai-answer" style="background: #f0f8ff; border: 1px solid #b3d9ff; padding: 1rem; margin: 1rem 0; border-radius: 4px;">
-        <h3 style="margin-top: 0; color: #0066cc;">🤖 AI Ответ</h3>
-        <p>${data.answer}</p>
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <h3 class="text-lg font-semibold text-blue-900 mb-2 flex items-center gap-2">
+          🤖 AI Answer
+        </h3>
+        <p class="text-blue-800">${data.answer}</p>
       </div>
     ` : '';
 
     const resultsHtml = data.results.map(result => `
-      <div class="search-result">
-        <h3><a href="${result.url}?highlight=${encodeURIComponent(data.query)}" data-search-link="${result.url}">${result.title}</a></h3>
-        <p>${result.description}</p>
-        <div class="search-meta">
-          <span class="search-score">Релевантность: ${(result.score * 100).toFixed(1)}%</span>
-          ${result.date ? ` • ${result.date}` : ''}
-          ${result.tags && result.tags.length > 0 ? ` • Теги: ${result.tags.join(', ')}` : ''}
-          ${result.source ? ` • ${result.source}` : ''}
+      <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+        <h3 class="text-lg font-semibold mb-2">
+          <a href="${result.url}?highlight=${encodeURIComponent(data.query)}" 
+             data-search-link="${result.url}" 
+             class="text-blue-600 hover:text-blue-800 hover:underline">
+            ${result.title}
+          </a>
+        </h3>
+        <p class="text-gray-700 mb-3">${result.description}</p>
+        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+          <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">
+            Relevance: ${(result.score * 100).toFixed(1)}%
+          </span>
+          ${result.date ? `<span>• ${result.date}</span>` : ''}
+          ${result.tags && result.tags.length > 0 ? `<span>• Tags: ${result.tags.join(', ')}</span>` : ''}
+          ${result.source ? `<span>• ${result.source}</span>` : ''}
         </div>
       </div>
     `).join('');
 
     this.results.innerHTML = `
       ${aiAnswerHtml}
-      <p><strong>Найдено результатов:</strong> ${data.total}</p>
-      ${resultsHtml}
+      <div class="mb-4 text-sm text-gray-600">
+        <strong>Results found:</strong> ${data.total}
+      </div>
+      <div class="space-y-4">
+        ${resultsHtml}
+      </div>
     `;
 
     // Add click handlers

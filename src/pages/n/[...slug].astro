@@ -1,5 +1,6 @@
 ---
 import { fetchNote, isPrivate, matchesDomain, generateMetaTags, getCurrentDomain, fetchPage, generateDefaultHeader } from '../../lib/md.ts';
+import '../../styles/global.css';
 
 const slugParam = Astro.params.slug;
 if (!slugParam) {
@@ -75,7 +76,7 @@ const metaWithCanonical = {
 ---
 
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -97,194 +98,91 @@ const metaWithCanonical = {
     <meta name="twitter:title" content={metaWithCanonical.og.title} />
     <meta name="twitter:description" content={metaWithCanonical.og.description} />
     {metaWithCanonical.og.image && <meta name="twitter:image" content={metaWithCanonical.og.image} />}
-
-    <style>
-      body {
-        max-width: 860px;
-        margin: 0 auto;
-        padding: 2rem;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        line-height: 1.55;
-      }
-
-      .prose {
-        color: #333;
-      }
-
-      .prose h1 {
-        color: #111;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 0.5rem;
-        margin-bottom: 1rem;
-      }
-
-      .prose h2 {
-        color: #222;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-      }
-
-      .prose h3 {
-        color: #333;
-        margin-top: 1.5rem;
-        margin-bottom: 0.75rem;
-      }
-
-      .prose a {
-        color: #0066cc;
-        text-decoration: none;
-      }
-
-      .prose a:hover {
-        text-decoration: underline;
-      }
-
-      .prose ul {
-        padding-left: 1.5rem;
-      }
-
-      .prose li {
-        margin: 0.5rem 0;
-      }
-
-      .prose blockquote {
-        border-left: 4px solid #ddd;
-        margin: 1.5rem 0;
-        padding: 0 1rem;
-        color: #666;
-        font-style: italic;
-      }
-
-      .prose code {
-        background: #f5f5f5;
-        padding: 0.2rem 0.4rem;
-        border-radius: 3px;
-        font-size: 0.9em;
-      }
-
-      .prose pre code {
-        background: none;
-        padding: 0;
-      }
-
-      .hljs {
-        background: #f8f8f8;
-        padding: 1rem;
-        border-radius: 4px;
-        overflow-x: auto;
-        font-size: 0.9em;
-      }
-
-      .note-meta {
-        border-top: 1px solid #eee;
-        margin-top: 3rem;
-        padding-top: 1rem;
-        font-size: 0.9em;
-        color: #666;
-      }
-
-      .note-meta a {
-        color: #666;
-      }
-
-      .private-notice {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 4px;
-        padding: 1rem;
-        margin-bottom: 2rem;
-        color: #856404;
-      }
-
-      .tags {
-        margin-top: 1rem;
-      }
-
-      .tag {
-        display: inline-block;
-        background: #f0f0f0;
-        padding: 0.2rem 0.6rem;
-        border-radius: 12px;
-        font-size: 0.8em;
-        margin: 0.2rem 0.2rem 0.2rem 0;
-        color: #666;
-      }
-
-      nav {
-        margin-bottom: 2rem;
-      }
-
-      nav a {
-        color: #666;
-        text-decoration: none;
-        font-size: 0.9em;
-      }
-
-      nav a:hover {
-        text-decoration: underline;
-      }
-    </style>
   </head>
+  
   <body>
-    <header>
-      <Fragment set:html={finalHeaderHtml} />
-    </header>
-    <div class="prose">
+    <div class="max-w-4xl mx-auto p-8">
+      <!-- Header -->
+      <header class="mb-6 pb-4 border-b-2 border-black">
+        <Fragment set:html={finalHeaderHtml} />
+      </header>
+
+      <!-- Private Notice -->
       {isNotePrivate && (
-        <div class="private-notice">
-          🔒 This is a private note. Access is restricted and content is not indexed by search engines.
+        <div class="mb-6 p-4 border-2 border-red-600 bg-yellow-100">
+          <p class="text-red-800 font-bold text-center">
+            🔒 PRIVATE NOTE - This content is not indexed by search engines
+          </p>
         </div>
       )}
 
-      <nav>
+      <!-- Navigation -->
+      <nav class="mb-6 text-sm">
         <a href="/">← Back to index</a>
-        <span> • </span>
+        <span class="mx-2">•</span>
         <a href="/search">🔍 Search</a>
-        <span> • </span>
+        <span class="mx-2">•</span>
         <a href={`/n/${slug}.md`}>View source (.md)</a>
       </nav>
 
-      <article>
-        {note.frontmatter.title && !note.hasH1 && (
-          <h1>{note.frontmatter.title}</h1>
-        )}
-        <Fragment set:html={note.html} />
-      </article>
+      <!-- Main Content -->
+      <main>
+        <article class="prose prose-xl max-w-none">
+          {note.frontmatter.title && !note.hasH1 && (
+            <h1>{note.frontmatter.title}</h1>
+          )}
+          <Fragment set:html={note.html} />
+        </article>
 
-      <div class="note-meta">
-        {note.frontmatter.date && (
-          <div>
-            <strong>Date:</strong> {note.frontmatter.date}
-          </div>
-        )}
+        <!-- Note Metadata -->
+        <div class="mt-12 pt-6 border-t-2 border-black">
+          <h3>Metadata</h3>
+          <table>
+            {note.frontmatter.date && (
+              <tr>
+                <td><strong>Date:</strong></td>
+                <td>{note.frontmatter.date}</td>
+              </tr>
+            )}
 
-        {note.frontmatter.category && (
-          <div>
-            <strong>Category:</strong> {note.frontmatter.category}
-          </div>
-        )}
+            {note.frontmatter.category && (
+              <tr>
+                <td><strong>Category:</strong></td>
+                <td>{note.frontmatter.category}</td>
+              </tr>
+            )}
 
-        {note.frontmatter.tags && note.frontmatter.tags.length > 0 && (
-          <div class="tags">
-            <strong>Tags:</strong>
-            {note.frontmatter.tags.map(tag => (
-              <span class="tag">{tag}</span>
-            ))}
-          </div>
-        )}
+            {note.frontmatter.tags && note.frontmatter.tags.length > 0 && (
+              <tr>
+                <td><strong>Tags:</strong></td>
+                <td>
+                  {note.frontmatter.tags.map((tag, index) => (
+                    <span>
+                      {tag}
+                      {index < note.frontmatter.tags.length - 1 && ', '}
+                    </span>
+                  ))}
+                </td>
+              </tr>
+            )}
 
-        {note.frontmatter.aliases && note.frontmatter.aliases.length > 0 && (
-          <div>
-            <strong>Aliases:</strong> {note.frontmatter.aliases.join(', ')}
-          </div>
-        )}
-      </div>
+            {note.frontmatter.aliases && note.frontmatter.aliases.length > 0 && (
+              <tr>
+                <td><strong>Aliases:</strong></td>
+                <td>{note.frontmatter.aliases.join(', ')}</td>
+              </tr>
+            )}
+          </table>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      {footerHtml && (
+        <footer class="mt-12 pt-6 border-t-2 border-black text-sm">
+          <Fragment set:html={footerHtml} />
+        </footer>
+      )}
     </div>
-    {footerHtml && (
-      <footer>
-        <Fragment set:html={footerHtml} />
-      </footer>
-    )}
 
     <script>
       import { PageHighlight } from '../../scripts/pageHighlight.js';

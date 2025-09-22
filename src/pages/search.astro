@@ -1,5 +1,6 @@
 ---
 import { fetchPage, getCurrentDomain, generateDefaultHeader } from '../lib/md.ts';
+import '../styles/global.css';
 
 const host = Astro.request.headers.get('host') || '';
 const url = new URL(Astro.request.url);
@@ -43,236 +44,104 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, s
 ---
 
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Поиск | Blog</title>
-    <meta name="description" content="Поиск по заметкам блога" />
+    <title>Search | Blog</title>
+    <meta name="description" content="Search through blog notes" />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href={canonicalUrl} />
 
     <!-- OG tags -->
-    <meta property="og:title" content="Поиск | Blog" />
-    <meta property="og:description" content="Поиск по заметкам блога" />
+    <meta property="og:title" content="Search | Blog" />
+    <meta property="og:description" content="Search through blog notes" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonicalUrl} />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Поиск | Blog" />
-    <meta name="twitter:description" content="Поиск по заметкам блога" />
-
-    <style>
-      body {
-        max-width: 860px;
-        margin: 0 auto;
-        padding: 2rem;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        line-height: 1.55;
-      }
-
-      .prose {
-        color: #333;
-      }
-
-      .prose h1 {
-        color: #111;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 0.5rem;
-        margin-bottom: 1rem;
-      }
-
-      .prose a {
-        color: #0066cc;
-        text-decoration: none;
-      }
-
-      .prose a:hover {
-        text-decoration: underline;
-      }
-
-      .search-container {
-        margin: 2rem 0;
-      }
-
-      .search-form {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 2rem;
-      }
-
-      .search-input {
-        flex: 1;
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 1rem;
-      }
-
-      .search-button {
-        padding: 0.75rem 1.5rem;
-        background: #0066cc;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 1rem;
-      }
-
-      .search-button:hover {
-        background: #0056b3;
-      }
-
-      .search-button:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-      }
-
-      .search-results {
-        margin-top: 2rem;
-      }
-
-      .search-result {
-        border: 1px solid #eee;
-        border-radius: 4px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-      }
-
-      .search-result h3 {
-        margin: 0 0 0.5rem 0;
-        color: #0066cc;
-      }
-
-      .search-result p {
-        margin: 0.5rem 0;
-        color: #666;
-      }
-
-      .search-meta {
-        font-size: 0.9em;
-        color: #999;
-        margin-top: 0.5rem;
-      }
-
-      .search-score {
-        background: #f0f0f0;
-        padding: 0.2rem 0.4rem;
-        border-radius: 12px;
-        font-size: 0.8em;
-      }
-
-      .loading {
-        text-align: center;
-        color: #666;
-        padding: 2rem;
-      }
-
-      .error {
-        background: #fee;
-        border: 1px solid #fcc;
-        padding: 1rem;
-        border-radius: 4px;
-        color: #c44;
-        margin: 1rem 0;
-      }
-
-      .search-mode {
-        display: flex;
-        gap: 1rem;
-        margin: 1rem 0;
-        padding: 0.5rem;
-        background: #f8f8f8;
-        border-radius: 4px;
-      }
-
-      .mode-label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        cursor: pointer;
-        font-size: 0.9em;
-        padding: 0.5rem 0.75rem;
-        border-radius: 4px;
-        transition: background-color 0.2s;
-      }
-
-      .mode-label:hover {
-        background: #e8e8e8;
-      }
-
-      .mode-label input[type="radio"] {
-        margin: 0;
-      }
-
-      nav {
-        margin-bottom: 2rem;
-      }
-
-      nav a {
-        color: #666;
-        text-decoration: none;
-        font-size: 0.9em;
-      }
-
-      nav a:hover {
-        text-decoration: underline;
-      }
-    </style>
+    <meta name="twitter:title" content="Search | Blog" />
+    <meta name="twitter:description" content="Search through blog notes" />
   </head>
+  
   <body>
-    <header>
-      <Fragment set:html={finalHeaderHtml} />
-    </header>
+    <div class="max-w-4xl mx-auto p-8">
+      <!-- Header -->
+      <header class="mb-6 pb-4 border-b-2 border-black">
+        <Fragment set:html={finalHeaderHtml} />
+      </header>
 
-    <div class="prose">
-      <nav>
+      <!-- Navigation -->
+      <nav class="mb-6 text-sm">
         <a href="/">← Back to index</a>
       </nav>
 
-      <h1>🔍 Поиск</h1>
+      <!-- Main Content -->
+      <main>
+        <h1>🔍 SEARCH</h1>
 
-      <div class="search-container">
-        <form class="search-form" id="searchForm">
-          <input
-            type="text"
-            class="search-input"
-            id="searchInput"
-            placeholder="Enter search query..."
-            value={query}
-            autofocus
-          />
-          <div class="search-mode">
-            <label class="mode-label">
-              <input type="radio" name="mode" value="search" checked />
-              🔍 Regular Search
-            </label>
-            <label class="mode-label">
-              <input type="radio" name="mode" value="ai" />
-              🤖 AI Search
-            </label>
-          </div>
-          <button type="submit" class="search-button" id="searchButton">
-            Search
-          </button>
+        <!-- Search Form -->
+        <form id="searchForm" class="mb-8">
+          <table>
+            <tr>
+              <td><strong>Search Query:</strong></td>
+              <td>
+                <input
+                  type="text"
+                  id="searchInput"
+                  placeholder="Enter search query..."
+                  value={query}
+                  autofocus
+                  class="w-full p-2 border-2 border-black font-mono text-lg"
+                />
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Search Mode:</strong></td>
+              <td>
+                <label class="mr-4">
+                  <input type="radio" name="mode" value="search" checked class="mr-1" />
+                  🔍 Regular Search
+                </label>
+                <label>
+                  <input type="radio" name="mode" value="ai" class="mr-1" />
+                  🤖 AI Search
+                </label>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Action:</strong></td>
+              <td>
+                <button
+                  type="submit"
+                  id="searchButton"
+                  class="px-6 py-3 bg-gray-200 border-2 border-black font-bold text-lg hover:bg-yellow-200 cursor-pointer"
+                >
+                  SEARCH
+                </button>
+              </td>
+            </tr>
+          </table>
         </form>
 
-        <div id="searchResults" class="search-results">
+        <!-- Search Results -->
+        <div id="searchResults">
           {query && (
-            <div class="loading">
-              Поиск по запросу "{query}"...
+            <div class="text-center py-8 border-2 border-black bg-gray-100 font-bold">
+              Searching for "{query}"...
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </main>
 
-    {footerHtml && (
-      <footer>
-        <Fragment set:html={footerHtml} />
-      </footer>
-    )}
+      <!-- Footer -->
+      {footerHtml && (
+        <footer class="mt-12 pt-6 border-t-2 border-black text-sm">
+          <Fragment set:html={footerHtml} />
+        </footer>
+      )}
+    </div>
 
     <script>
       import { SearchPage } from '../scripts/searchPage.js';

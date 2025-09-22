@@ -1,0 +1,224 @@
+---
+import { fetchPage, getCurrentDomain, generateDefaultHeader } from '../lib/md.ts';
+import '../styles/global.css';
+
+const host = Astro.request.headers.get('host') || '';
+const url = new URL(Astro.request.url);
+const domainOverride = url.searchParams.get('domain');
+const currentDomain = domainOverride || getCurrentDomain(host);
+const env = Astro.locals?.cloudflare?.env ?? Astro.locals?.runtime?.env;
+
+const [headerHtml, footerPartial] = await Promise.all([
+  fetchPage('header', true, currentDomain, env, Astro.request),
+  fetchPage('footer', true, currentDomain, env, Astro.request)
+]);
+
+// Use default header if not found
+const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
+
+const getPrimaryDomain = (domain: string) => {
+  const parts = domain.split('.');
+  if (parts.length >= 2) {
+    return parts.slice(-2).join('.');
+  }
+  return domain;
+};
+
+const fallbackFooter = (() => {
+  if (!currentDomain) return null;
+  const primaryDomain = getPrimaryDomain(currentDomain);
+  const email = `info@${primaryDomain}`;
+  return `<p><a href="mailto:${email}">${email}</a></p>`;
+})();
+
+const footerHtml = footerPartial || fallbackFooter;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Upload | Blog</title>
+    <meta name="description" content="Upload files to R2 storage" />
+    <meta name="robots" content="noindex" />
+  </head>
+  
+  <body>
+    <div class="max-w-4xl mx-auto p-8">
+      <!-- Header -->
+      <header class="mb-6 pb-4 border-b-2 border-black">
+        <Fragment set:html={finalHeaderHtml} />
+      </header>
+
+      <!-- Navigation -->
+      <nav class="mb-6 text-sm">
+        <a href="/">← Back to index</a>
+        <span class="mx-2">•</span>
+        <a href="/files">📁 View Files</a>
+      </nav>
+
+      <!-- Main Content -->
+      <main>
+        <h1>📤 FILE UPLOAD</h1>
+
+        <!-- Upload Form -->
+        <div id="uploadZone" class="p-8 border-4 border-dashed border-black bg-gray-100 text-center cursor-pointer mb-6">
+          <p><strong>Drag & Drop files here</strong></p>
+          <p>or</p>
+          <input type="file" id="fileInput" multiple class="mt-4" />
+          <p class="mt-4 text-sm">Maximum file size: 20MB</p>
+        </div>
+
+        <!-- Upload Progress -->
+        <div id="uploadProgress" class="hidden mb-6">
+          <h3>Upload Progress</h3>
+          <div id="progressList"></div>
+        </div>
+
+        <!-- Upload Log -->
+        <div id="uploadLog">
+          <h3>Upload Log</h3>
+          <div id="logContent" class="border-2 border-black p-4 bg-white min-h-32 font-mono text-sm"></div>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      {footerHtml && (
+        <footer class="mt-12 pt-6 border-t-2 border-black text-sm">
+          <Fragment set:html={footerHtml} />
+        </footer>
+      )}
+    </div>
+
+    <script>
+      // File upload functionality
+      const uploadZone = document.getElementById('uploadZone');
+      const fileInput = document.getElementById('fileInput');
+      const uploadProgress = document.getElementById('uploadProgress');
+      const progressList = document.getElementById('progressList');
+      const logContent = document.getElementById('logContent');
+
+      function log(message: string) {
+        const timestamp = new Date().toLocaleTimeString();
+        logContent.innerHTML += `[${timestamp}] ${message}<br>`;
+        logContent.scrollTop = logContent.scrollHeight;
+      }
+
+      function showProgress() {
+        uploadProgress.classList.remove('hidden');
+      }
+
+      function hideProgress() {
+        uploadProgress.classList.add('hidden');
+        progressList.innerHTML = '';
+      }
+
+      async function uploadFile(file: File) {
+        const progressId = `progress-${Date.now()}-${Math.random()}`;
+        const progressDiv = document.createElement('div');
+        progressDiv.id = progressId;
+        progressDiv.innerHTML = `
+          <div class="mb-2">
+            <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
+            <div class="border-2 border-black bg-white mt-1">
+              <div class="bg-gray-300 h-4 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="text-sm mt-1">Preparing...</div>
+          </div>
+        `;
+        progressList.appendChild(progressDiv);
+        showProgress();
+
+        try {
+          log(`Starting upload: ${file.name}`);
+          
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const progressBar = progressDiv.querySelector('.bg-gray-300') as HTMLElement;
+          const statusText = progressDiv.querySelector('.text-sm') as HTMLElement;
+
+          statusText.textContent = 'Uploading...';
+          progressBar.style.width = '50%';
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          progressBar.style.width = '100%';
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+            throw new Error(error.error || 'Upload failed');
+          }
+
+          const result = await response.json();
+          statusText.textContent = `✅ Upload complete!`;
+          progressBar.style.backgroundColor = '#90EE90';
+          
+          log(`✅ SUCCESS: ${file.name} → ${result.key}`);
+          log(`📁 File URL: /api/file/${result.key}`);
+
+        } catch (error: any) {
+          const progressBar = progressDiv.querySelector('.bg-gray-300') as HTMLElement;
+          const statusText = progressDiv.querySelector('.text-sm') as HTMLElement;
+          
+          statusText.textContent = `❌ Error: ${error.message}`;
+          progressBar.style.backgroundColor = '#FFB6C1';
+          
+          log(`❌ ERROR: ${file.name} - ${error.message}`);
+        }
+
+        setTimeout(() => {
+          progressDiv.remove();
+          if (progressList.children.length === 0) {
+            hideProgress();
+          }
+        }, 5000);
+      }
+
+      // Drag and drop handlers
+      uploadZone.addEventListener('dragover', (e: DragEvent) => {
+        e.preventDefault();
+        uploadZone.style.backgroundColor = '#E6E6FA';
+        uploadZone.style.borderColor = '#4B0082';
+      });
+
+      uploadZone.addEventListener('dragleave', () => {
+        uploadZone.style.backgroundColor = '#F5F5F5';
+        uploadZone.style.borderColor = '#000000';
+      });
+
+      uploadZone.addEventListener('drop', (e: DragEvent) => {
+        e.preventDefault();
+        uploadZone.style.backgroundColor = '#F5F5F5';
+        uploadZone.style.borderColor = '#000000';
+        
+        const files = Array.from(e.dataTransfer?.files || []);
+        files.forEach(uploadFile);
+      });
+
+      // File input handler
+      fileInput.addEventListener('change', (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        if (target.files) {
+          const files = Array.from(target.files);
+          files.forEach(uploadFile);
+          target.value = ''; // Reset input
+        }
+      });
+
+      // Click handler for upload zone
+      uploadZone.addEventListener('click', (e: Event) => {
+        if (e.target !== fileInput) {
+          fileInput.click();
+        }
+      });
+
+      // Initial log message
+      log('📤 File upload system ready');
+    </script>
+  </body>
+</html>

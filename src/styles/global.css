@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/* Classic oldschool web typography - global overrides */
+body {
+  font-family: "Roboto", sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+  background-color: white !important;
+  color: black !important;
+}
+
+/* Typography hierarchy - compact */
+h1 {
+  font-size: 1.8em !important;
+  font-weight: bold !important;
+  text-align: center !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  padding-bottom: 0.3em !important;
+  margin: 0.8em 0 0.6em 0 !important;
+  color: black !important;
+}
+
+h2 {
+  font-size: 1.5em !important;
+  font-weight: bold !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding-bottom: 0.2em !important;
+  margin: 1em 0 0.5em 0 !important;
+  color: black !important;
+}
+
+h3 {
+  font-size: 1.3em !important;
+  font-weight: bold !important;
+  margin: 0.8em 0 0.4em 0 !important;
+  color: black !important;
+}
+
+h4 {
+  font-size: 1.1em !important;
+  font-weight: bold !important;
+  margin: 0.7em 0 0.3em 0 !important;
+  color: black !important;
+}
+
+h5, h6 {
+  font-size: 1em !important;
+  font-weight: bold !important;
+  margin: 0.6em 0 0.3em 0 !important;
+  color: black !important;
+}
+
+/* Text elements - compact */
+p {
+  margin: 0.5em 0 !important;
+  text-align: left !important;
+  font-size: 1em !important;
+  line-height: 1.4 !important;
+}
+
+/* Links - classic web style */
+a {
+  color: #0000EE !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 2px !important;
+}
+
+a:visited {
+  color: #551A8B !important;
+}
+
+a:hover {
+  background-color: #FFFF00 !important;
+}
+
+/* Lists - compact */
+ul, ol {
+  margin: 0.5em 0 !important;
+  padding-left: 1.5em !important;
+  font-size: 1em !important;
+}
+
+li {
+  margin: 0.2em 0 !important;
+  line-height: 1.4 !important;
+}
+
+/* Code - compact */
+code {
+  background-color: #fafafa !important;
+  color: black !important;
+  padding: 0.1em 0.3em !important;
+  font-family: "Courier New", Courier, monospace !important;
+  font-size: 0.9em !important;
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 2px !important;
+}
+
+pre {
+  background-color: #fafafa !important;
+  border: 1px solid #f0f0f0 !important;
+  padding: 0.5em !important;
+  overflow-x: auto !important;
+  font-family: "Courier New", Courier, monospace !important;
+  margin: 0.5em 0 !important;
+  font-size: 0.9em !important;
+}
+
+pre code {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Blockquotes - compact */
+blockquote {
+  border-left: 2px solid #e0e0e0 !important;
+  padding-left: 0.8em !important;
+  margin: 0.5em 0 !important;
+  font-style: italic !important;
+  color: #666666 !important;
+}
+
+/* Tables - compact */
+table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 0.5em 0 !important;
+  font-size: 0.95em !important;
+}
+
+th, td {
+  border: 1px solid #f0f0f0 !important;
+  padding: 0.3em 0.5em !important;
+  text-align: left !important;
+}
+
+th {
+  background-color: #fafafa !important;
+  font-weight: bold !important;
+}
+
+/* Strong and emphasis */
+strong, b {
+  font-weight: bold !important;
+  color: black !important;
+}
+
+em, i {
+  font-style: italic !important;
+}
+
+/* HR - compact */
+hr {
+  border: none !important;
+  border-top: 1px solid #f0f0f0 !important;
+  margin: 1em 0 !important;
+}
