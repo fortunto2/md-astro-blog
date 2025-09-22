@@ -14,7 +14,7 @@ const [headerHtml, footerPartial] = await Promise.all([
 ]);
 
 // Use default header if not found
-const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
+const finalHeaderHtml = headerHtml || generateDefaultHeader();
 
 const getPrimaryDomain = (domain: string) => {
   const parts = domain.split('.');
@@ -220,7 +220,7 @@ const footerHtml = footerPartial || fallbackFooter;
         filesContainer.classList.remove('hidden');
         noFiles.classList.add('hidden');
 
-        const viewMode = document.querySelector('input[name="viewMode"]:checked')?.value;
+        const viewMode = (document.querySelector('input[name="viewMode"]:checked') as HTMLInputElement)?.value;
         
         if (viewMode === 'grid') {
           filesList.classList.add('hidden');

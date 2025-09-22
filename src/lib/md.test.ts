@@ -164,7 +164,7 @@ describe('generateMetaTags', () => {
 
 describe('generateDefaultHeader', () => {
   it('should generate default header HTML', () => {
-    const result = generateDefaultHeader('example.com');
+    const result = generateDefaultHeader();
 
     expect(result).toContain('Blog - Zettelkasten');
     expect(result).toContain('href="/"');
@@ -175,8 +175,8 @@ describe('generateDefaultHeader', () => {
   });
 
   it('should always use generic "Blog" name', () => {
-    const result1 = generateDefaultHeader('blog.akbuzat.net');
-    const result2 = generateDefaultHeader('example.com');
+    const result1 = generateDefaultHeader();
+    const result2 = generateDefaultHeader();
 
     expect(result1).toContain('Blog - Zettelkasten');
     expect(result2).toContain('Blog - Zettelkasten');

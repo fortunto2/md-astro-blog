@@ -22,7 +22,7 @@ if (!html) {
 }
 
 // Use default header if not found
-const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
+const finalHeaderHtml = headerHtml || generateDefaultHeader();
 
 const getPrimaryDomain = (domain: string) => {
   const parts = domain.split('.');

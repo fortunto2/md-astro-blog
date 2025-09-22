@@ -60,7 +60,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
       // Try to parse: timestamp-hash-originalname (new format)
       let match = keyParts.match(/^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-([a-f0-9]{8})-(.+)$/);
       if (match) {
-        const [, timestamp, hash, filename] = match;
+        const [, timestamp, , filename] = match;
         // Convert timestamp back to ISO format
         uploadedDate = timestamp.replace(/-/g, ':').replace(/(\d{4}):(\d{2}):(\d{2})T(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1-$2-$3T$4:$5:$6.$7Z');
         originalName = filename.replace(/_/g, ' '); // Convert underscores back to spaces
@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
         // Try to parse: timestamp-longhash-originalname (old format)
         match = keyParts.match(/^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-([a-f0-9-]{36})-(.+)$/);
         if (match) {
-          const [, timestamp, hash, filename] = match;
+          const [, timestamp, , filename] = match;
           uploadedDate = timestamp.replace(/-/g, ':').replace(/(\d{4}):(\d{2}):(\d{2})T(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1-$2-$3T$4:$5:$6.$7Z');
           originalName = filename.replace(/_/g, ' ');
         } else {

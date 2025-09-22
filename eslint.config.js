@@ -1,7 +1,9 @@
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
+import astro from 'eslint-plugin-astro';
 
 export default [
+  ...astro.configs.recommended,
   {
     files: ['**/*.{ts,tsx,js,jsx,mjs}'],
     languageOptions: {
@@ -36,7 +38,9 @@ export default [
       'dist/',
       'node_modules/',
       '*.config.js',
-      '*.config.mjs'
+      '*.config.mjs',
+      '.astro/',
+      '.wrangler/'
     ]
   }
 ];

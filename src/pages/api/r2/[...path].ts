@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const devContentPath = join(__dirname, '../../../../dev-content');
 
-export const GET: APIRoute = async ({ params, request, locals }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
   const path = params.path || '';
 
   if (!path.endsWith('.md')) {

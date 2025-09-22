@@ -14,7 +14,7 @@ const [headerHtml, footerPartial] = await Promise.all([
 ]);
 
 // Use default header if not found
-const finalHeaderHtml = headerHtml || generateDefaultHeader(host);
+const finalHeaderHtml = headerHtml || generateDefaultHeader();
 
 const getPrimaryDomain = (domain: string) => {
   const parts = domain.split('.');
@@ -99,19 +99,27 @@ const footerHtml = footerPartial || fallbackFooter;
       const progressList = document.getElementById('progressList');
       const logContent = document.getElementById('logContent');
 
+      // Early return if essential elements are missing
+      if (!uploadZone || !fileInput || !uploadProgress || !progressList) {
+        console.error('Missing required DOM elements');
+        return;
+      }
+
       function log(message: string) {
         const timestamp = new Date().toLocaleTimeString();
-        logContent.innerHTML += `[${timestamp}] ${message}<br>`;
-        logContent.scrollTop = logContent.scrollHeight;
+        if (logContent) {
+          logContent.innerHTML += `[${timestamp}] ${message}<br>`;
+          logContent.scrollTop = logContent.scrollHeight;
+        }
       }
 
       function showProgress() {
-        uploadProgress.classList.remove('hidden');
+        uploadProgress!.classList.remove('hidden');
       }
 
       function hideProgress() {
-        uploadProgress.classList.add('hidden');
-        progressList.innerHTML = '';
+        uploadProgress!.classList.add('hidden');
+        progressList!.innerHTML = '';
       }
 
       async function uploadFile(file: File) {
@@ -127,7 +135,7 @@ const footerHtml = footerPartial || fallbackFooter;
             <div class="text-sm mt-1">Preparing...</div>
           </div>
         `;
-        progressList.appendChild(progressDiv);
+        progressList!.appendChild(progressDiv);
         showProgress();
 
         try {
@@ -173,7 +181,7 @@ const footerHtml = footerPartial || fallbackFooter;
 
         setTimeout(() => {
           progressDiv.remove();
-          if (progressList.children.length === 0) {
+          if (progressList!.children.length === 0) {
             hideProgress();
           }
         }, 5000);

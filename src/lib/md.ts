@@ -1,17 +1,17 @@
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 
-const md = new MarkdownIt({
+const md: MarkdownIt = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
-  highlight: function (str, lang) {
+  highlight: function (str: string, lang: string): string {
     if (lang && hljs.getLanguage(lang)) {
       try {
         return '<pre><code class="hljs language-' + lang + '">' +
                hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
                '</code></pre>';
-      } catch (__) {}
+      } catch {}
     }
     return '<pre><code class="hljs">' + md.utils.escapeHtml(str) + '</code></pre>';
   }
@@ -106,14 +106,14 @@ export function parseFrontmatter(markdown: string): { frontmatter: NoteFrontmatt
 
 export function processWikilinks(content: string, addMarkdownLinks = false): string {
   // Convert [[wikilink]] to /n/wikilink
-  let processed = content.replace(/\[\[([^\]]+)\]\]/g, (match, linkText) => {
+  let processed = content.replace(/\[\[([^\]]+)\]\]/g, (_, linkText) => {
     const slug = linkText.toLowerCase().replace(/\s+/g, '-');
     return `[${linkText}](/n/${slug})`;
   });
 
   // Add markdown version links for index pages
   if (addMarkdownLinks) {
-    processed = processed.replace(/(\[([^\]]+)\]\(\/n\/([^)]+)\))/g, (match, fullLink, linkText, slug) => {
+    processed = processed.replace(/(\[([^\]]+)\]\(\/n\/([^)]+)\))/g, (_, fullLink, __, slug) => {
       return `${fullLink} ([.md](/n/${slug}.md))`;
     });
   }
@@ -213,7 +213,7 @@ export function getCurrentDomain(host: string): string {
   return domain;
 }
 
-export function generateDefaultHeader(domain: string): string {
+export function generateDefaultHeader(): string {
   const siteName = 'Blog';
   return md.render(`# [🌟 ${siteName} - Zettelkasten](/)
 

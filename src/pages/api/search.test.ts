@@ -93,19 +93,19 @@ describe('Search mode parameter', () => {
   });
 
   it('should handle regular search mode', () => {
-    const mode = 'regular';
+    const mode: string = 'regular';
     const isAIMode = mode === 'ai';
     expect(isAIMode).toBe(false);
   });
 
   it('should default to regular search for undefined mode', () => {
-    const mode = undefined;
+    const mode: string | undefined = undefined;
     const isAIMode = mode === 'ai';
     expect(isAIMode).toBe(false);
   });
 
   it('should default to regular search for invalid mode', () => {
-    const mode = 'invalid';
+    const mode: string = 'invalid';
     const isAIMode = mode === 'ai';
     expect(isAIMode).toBe(false);
   });
