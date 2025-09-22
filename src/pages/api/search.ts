@@ -19,8 +19,45 @@ function extractTitleFromContent(content: string): string {
   return '';
 }
 
-export const GET: APIRoute = async ({ url, locals }) => {
+function createDomainFilter(domain?: string) {
+  if (!domain) return undefined;
+
+  // AutoRAG использует 'folder' metadata для фильтрации, НЕ 'filename'
+  // Создаем фильтр "starts with" для папки домена
+  return {
+    type: 'and' as const,
+    filters: [
+      {
+        type: 'gte' as const,
+        key: 'folder',
+        value: `${domain}/`
+      },
+      {
+        type: 'lt' as const,
+        key: 'folder',
+        value: `${domain}/~` // Следующий символ после домена для "starts with"
+      }
+    ]
+  };
+}
+
+function getDomainFromHost(host: string): string | undefined {
+  // Маппинг хостов на домены для автофильтрации
+  if (host.includes('blog.akbuzat.net')) {
+    return 'blog.akbuzat.net';
+  }
+  // Добавьте другие домены при необходимости
+  return undefined;
+}
+
+export const GET: APIRoute = async ({ url, locals, request }) => {
   const query = url.searchParams.get('q');
+  const domainParam = url.searchParams.get('domain');
+
+  // Автоматическое определение домена из хоста
+  const host = request.headers.get('host') || '';
+  const autoDomain = getDomainFromHost(host);
+  const domain = domainParam || autoDomain;
 
   if (!query || query.trim().length < 2) {
     return new Response(JSON.stringify({
@@ -31,16 +68,19 @@ export const GET: APIRoute = async ({ url, locals }) => {
     });
   }
 
-  const env = locals?.cloudflare?.env ?? locals?.runtime?.env;
+  const env = (locals as any)?.cloudflare?.env ?? (locals as any)?.runtime?.env;
 
   // Use AutoRAG with proper API according to documentation
   if (env?.AI) {
     try {
+      const domainFilter = createDomainFilter(domain);
+      
       // Try aiSearch first (with AI-generated answer)
       const answer = await env.AI.autorag("blog-deep").aiSearch({
         query: query.trim(),
         max_num_results: 10,
-        rewrite_query: true
+        rewrite_query: true,
+        filters: domainFilter
       });
 
       if (answer?.data && answer.data.length > 0) {
@@ -62,6 +102,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
         return new Response(JSON.stringify({
           query: query.trim(),
+          domain: domain || 'all',
           total: results.length,
           results: results,
           answer: answer.answer || `Found ${results.length} relevant documents.`
@@ -78,7 +119,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
       const searchResult = await env.AI.autorag("blog-deep").search({
         query: query.trim(),
         max_num_results: 10,
-        rewrite_query: false
+        rewrite_query: false,
+        filters: domainFilter
       });
 
       if (searchResult?.data && searchResult.data.length > 0) {
@@ -100,6 +142,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
         return new Response(JSON.stringify({
           query: query.trim(),
+          domain: domain || 'all',
           total: results.length,
           results: results,
           answer: `Found ${results.length} documents matching your search.`
