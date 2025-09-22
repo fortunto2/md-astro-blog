@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "AI_Gateway": {
+      "type": "sse",
+      "url": "https://ai-gateway.mcp.cloudflare.com/sse"
+    },
+    "Documentation": {
+      "type": "sse",
+      "url": "https://docs.mcp.cloudflare.com/sse"
+    },
+    "AutoRAG": {
+      "type": "sse",
+      "url": "https://autorag.mcp.cloudflare.com/sse"
+    },
+    "astro-docs": {
+      "type": "http",
+      "url": "https://mcp.docs.astro.build/mcp"
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}

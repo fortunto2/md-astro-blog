@@ -1,0 +1,332 @@
+---
+import { fetchPage, getCurrentDomain } from '../lib/md.ts';
+
+const host = Astro.request.headers.get('host') || '';
+const url = new URL(Astro.request.url);
+const domainOverride = url.searchParams.get('domain');
+const currentDomain = domainOverride || getCurrentDomain(host);
+const env = Astro.locals?.cloudflare?.env ?? Astro.locals?.runtime?.env;
+
+const query = url.searchParams.get('q') || '';
+
+const [headerHtml, footerPartial] = await Promise.all([
+  fetchPage('header', true, currentDomain, env, Astro.request),
+  fetchPage('footer', true, currentDomain, env, Astro.request)
+]);
+
+const getPrimaryDomain = (domain: string) => {
+  const parts = domain.split('.');
+  if (parts.length >= 2) {
+    return parts.slice(-2).join('.');
+  }
+  return domain;
+};
+
+const fallbackFooter = (() => {
+  if (!currentDomain) return null;
+  const primaryDomain = getPrimaryDomain(currentDomain);
+  const email = `info@${primaryDomain}`;
+  return `<p><a href="mailto:${email}">${email}</a></p>`;
+})();
+
+const footerHtml = footerPartial || fallbackFooter;
+
+const canonicalUrl = host.includes('localhost') || host.includes('127.0.0.1')
+  ? `http://${host}/search`
+  : `https://${host}/search`;
+
+// Set cache headers
+Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+---
+
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Поиск | Blog</title>
+    <meta name="description" content="Поиск по заметкам блога" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- OG tags -->
+    <meta property="og:title" content="Поиск | Blog" />
+    <meta property="og:description" content="Поиск по заметкам блога" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Поиск | Blog" />
+    <meta name="twitter:description" content="Поиск по заметкам блога" />
+
+    <style>
+      body {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 2rem;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        line-height: 1.55;
+      }
+
+      .prose {
+        color: #333;
+      }
+
+      .prose h1 {
+        color: #111;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .prose a {
+        color: #0066cc;
+        text-decoration: none;
+      }
+
+      .prose a:hover {
+        text-decoration: underline;
+      }
+
+      .search-container {
+        margin: 2rem 0;
+      }
+
+      .search-form {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .search-input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      .search-button {
+        padding: 0.75rem 1.5rem;
+        background: #0066cc;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+      }
+
+      .search-button:hover {
+        background: #0056b3;
+      }
+
+      .search-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .search-results {
+        margin-top: 2rem;
+      }
+
+      .search-result {
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .search-result h3 {
+        margin: 0 0 0.5rem 0;
+        color: #0066cc;
+      }
+
+      .search-result p {
+        margin: 0.5rem 0;
+        color: #666;
+      }
+
+      .search-meta {
+        font-size: 0.9em;
+        color: #999;
+        margin-top: 0.5rem;
+      }
+
+      .search-score {
+        background: #f0f0f0;
+        padding: 0.2rem 0.4rem;
+        border-radius: 12px;
+        font-size: 0.8em;
+      }
+
+      .loading {
+        text-align: center;
+        color: #666;
+        padding: 2rem;
+      }
+
+      .error {
+        background: #fee;
+        border: 1px solid #fcc;
+        padding: 1rem;
+        border-radius: 4px;
+        color: #c44;
+        margin: 1rem 0;
+      }
+
+      nav {
+        margin-bottom: 2rem;
+      }
+
+      nav a {
+        color: #666;
+        text-decoration: none;
+        font-size: 0.9em;
+      }
+
+      nav a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    {headerHtml && (
+      <header>
+        <Fragment set:html={headerHtml} />
+      </header>
+    )}
+
+    <div class="prose">
+      <nav>
+        <a href="/">← Back to index</a>
+      </nav>
+
+      <h1>🔍 Поиск</h1>
+
+      <div class="search-container">
+        <form class="search-form" id="searchForm">
+          <input
+            type="text"
+            class="search-input"
+            id="searchInput"
+            placeholder="Введите запрос для поиска..."
+            value={query}
+            autofocus
+          />
+          <button type="submit" class="search-button" id="searchButton">
+            Поиск
+          </button>
+        </form>
+
+        <div id="searchResults" class="search-results">
+          {query && (
+            <div class="loading">
+              Поиск по запросу "{query}"...
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {footerHtml && (
+      <footer>
+        <Fragment set:html={footerHtml} />
+      </footer>
+    )}
+
+    <script>
+      const searchForm = document.getElementById('searchForm');
+      const searchInput = document.getElementById('searchInput');
+      const searchButton = document.getElementById('searchButton');
+      const searchResults = document.getElementById('searchResults');
+
+      // Perform search on form submit
+      searchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = searchInput.value.trim();
+        if (!query) return;
+
+        // Update URL
+        const url = new URL(window.location);
+        url.searchParams.set('q', query);
+        window.history.pushState({}, '', url);
+
+        await performSearch(query);
+      });
+
+      // Perform search on page load if query exists
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialQuery = urlParams.get('q');
+      if (initialQuery) {
+        performSearch(initialQuery);
+      }
+
+      async function performSearch(query) {
+        if (!query || query.length < 2) {
+          searchResults.innerHTML = '<div class="error">Запрос должен содержать минимум 2 символа</div>';
+          return;
+        }
+
+        searchButton.disabled = true;
+        searchButton.textContent = 'Поиск...';
+        searchResults.innerHTML = '<div class="loading">Поиск в процессе...</div>';
+
+        try {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Search failed');
+          }
+
+          displayResults(data);
+        } catch (error) {
+          console.error('Search error:', error);
+          searchResults.innerHTML = `<div class="error">Ошибка поиска: ${error.message}</div>`;
+        } finally {
+          searchButton.disabled = false;
+          searchButton.textContent = 'Поиск';
+        }
+      }
+
+      function displayResults(data) {
+        if (!data.results || data.results.length === 0) {
+          searchResults.innerHTML = `
+            <div class="error">
+              По запросу "${data.query}" ничего не найдено.
+              Попробуйте использовать другие ключевые слова.
+            </div>
+          `;
+          return;
+        }
+
+        const resultsHtml = data.results.map(result => `
+          <div class="search-result">
+            <h3><a href="${result.url}">${result.title}</a></h3>
+            <p>${result.description}</p>
+            <div class="search-meta">
+              <span class="search-score">Релевантность: ${(result.score * 100).toFixed(1)}%</span>
+              ${result.date ? ` • ${result.date}` : ''}
+              ${result.tags && result.tags.length > 0 ? ` • Теги: ${result.tags.join(', ')}` : ''}
+              ${result.source ? ` • ${result.source}` : ''}
+            </div>
+          </div>
+        `).join('');
+
+        const aiAnswerHtml = data.answer ? `
+          <div class="ai-answer" style="background: #f0f8ff; border: 1px solid #b3d9ff; padding: 1rem; margin: 1rem 0; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #0066cc;">🤖 AI Ответ</h3>
+            <p>${data.answer}</p>
+          </div>
+        ` : '';
+
+        searchResults.innerHTML = `
+          ${aiAnswerHtml}
+          <p><strong>Найдено результатов:</strong> ${data.total}</p>
+          ${resultsHtml}
+        `;
+      }
+    </script>
+  </body>
+</html>
