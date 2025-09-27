@@ -23,6 +23,12 @@
     "blog2": {
       "type": "sse",
       "url": "https://my-mcp-server.nameless-sunset-8f24.workers.dev/sse"
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "chrome-devtools-mcp@latest"
+      ]
     }
   }
 }
